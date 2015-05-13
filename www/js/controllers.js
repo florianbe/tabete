@@ -88,6 +88,10 @@ angular.module('tabete.controllers', [])
     devTest.testImport();
   }
 
+  $scope.testDatabaseAccess = function() {
+    alert('hello');
+  }
+
 })  
 
 .controller('PlaylistsCtrl', function($scope) {
