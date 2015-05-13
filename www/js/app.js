@@ -4,9 +4,9 @@
 // 'starter' is the name of this angular module example (also set in a <body> attribute in index.html)
 // the 2nd parameter is an array of 'requires'
 // 'starter.controllers' is found in controllers.js
-angular.module('tabete', ['ionic', 'tabete.controllers'])
+angular.module('tabete', ['ionic', 'ionic.utils', 'ngCordova', 'tabete.services', 'tabete.controllers'])
 
-.run(function($ionicPlatform) {
+.run(function($ionicPlatform, $cordovaSQLite) {
   $ionicPlatform.ready(function() {
     // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
     // for form inputs)
@@ -17,6 +17,36 @@ angular.module('tabete', ['ionic', 'tabete.controllers'])
       // org.apache.cordova.statusbar required
       StatusBar.styleDefault();
     }
+
+    //Database: open web DB or SQLITE
+    if(window.cordova) {
+      // App syntax
+      db = $cordovaSQLite.openDB("tabete.db");
+    } else {
+      // Ionic serve syntax
+      db = window.openDatabase("tabete.db", "1.0", "Cordova Demo", 200000);
+    }
+
+    //Database: create tables
+    //SERVERS
+    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS servers (server_id integer primary key, url text, subject_id integer, subject_name text)");
+    //STUDIES
+    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS studies (study_id integer primary key, version integer, server_id integer, remote_id integer, name text, short_name text, description text, state text, start_date text, end_date text, finalupload_date text)");
+    //SUBSTUDIES
+    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS substudies (substudy_id integer primary key, version integer, study_id integer, title text, triggertype text, description text)");
+    //SIGNAL POINTS
+    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS signalpoints (signalpoint_id integer primary key, substudy_id integer, signal_date text)");
+    //QUESTION GROUPS
+    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questiongroups (questiongroup_id integer primary key, version integer, substudy_id integer, name text, sequence_id integer, randomorder integer)");
+    //RULES
+    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS rules (rule_id integer primary key, questiongroup_id integer, question_id integer, answer_value text)");
+    //QUESTIONS
+    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questions (question_id integer primary key, remote_id integer, version integer, questiongroup_id integer, sequence_id integer, type text, mandatory integer, text text, min text, max text, step text)");
+    //QUESTIONS OPTIONS
+    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questionoptions (questionoption_id integer primary key, question_id integer, code text, description text, value text)");
+    //ANSWERS
+    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS answers (answer_id integer primary key, question_id integer, answer text, testanswer integer, answer_date text, signal_date text)");
+
   });
 })
 
@@ -30,42 +60,25 @@ angular.module('tabete', ['ionic', 'tabete.controllers'])
     controller: 'AppCtrl'
   })
 
-  .state('app.search', {
-    url: "/search",
-    views: {
-      'menuContent': {
-        templateUrl: "templates/search.html"
-      }
-    }
-  })
-
-  .state('app.browse', {
-    url: "/browse",
-    views: {
-      'menuContent': {
-        templateUrl: "templates/browse.html"
-      }
-    }
-  })
-    .state('app.playlists', {
-      url: "/playlists",
+  .state('app.studies', {
+      url: "/studies",
       views: {
         'menuContent': {
-          templateUrl: "templates/playlists.html",
-          controller: 'PlaylistsCtrl'
+          templateUrl: "templates/studies.html",
+          controller: 'StudiesCtrl'
         }
       }
     })
 
-  .state('app.single', {
-    url: "/playlists/:playlistId",
+  .state('app.questiongroup', {
+    url: "substudy/:sustuId",
     views: {
       'menuContent': {
-        templateUrl: "templates/playlist.html",
-        controller: 'PlaylistCtrl'
+        templateUrl: "templates/questiongroup.html",
+        controller: 'QuestionGroupCtrl'
       }
     }
   });
   // if none of the above states are matched, use this as the fallback
-  $urlRouterProvider.otherwise('/app/playlists');
+  $urlRouterProvider.otherwise('/app/studies');
 });

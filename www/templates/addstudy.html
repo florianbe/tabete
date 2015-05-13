@@ -1,0 +1,41 @@
+<ion-modal-view>
+  <ion-header-bar>
+    <h1 class="title">Neue Studie</h1>
+    <div class="buttons">
+      <button class="button button-clear" ng-click="closeNewStudy()">Abbruch</button>
+    </div>
+  </ion-header-bar>
+  <ion-content>
+    <form ng-submit="addNewStudy()">
+      <div class="list">
+        <label class="item item-text-wrap">
+          <p>Das Erfassen einer neuen Studie kann entweder manuell oder per QR-Code erfolgen.</p>
+        </label>
+        <label class="item item-divider">
+        Manuelle Dateneingabe
+        </label>
+        <label class="item item-input">
+          <span class="input-label">Server:</span>
+          <input type="text" ng-model="newStudyInput.studyServer">
+        </label>
+        <label class="item item-input">
+          <span class="input-label">Studie:</span>
+          <input type="text" ng-model="newStudyInput.studyName">
+        </label>
+        <label class="item item-input">
+          <span class="input-label">Studienpasswort:</span>
+          <input type="text" ng-model="newStudyInput.studyPassword">
+        </label>
+        <label class="item">
+          <button class="button button-block button-positive" type="submit">Speichern</button>
+        </label>
+        <label class="item item-divider">
+        QR-Code erfassen
+        </label>
+        <label class="item">
+          <button class="button button-block button-positive" ng-click="scanNewStudy()">QR-Code scannen</button>
+        </label>
+      </div>
+    </form>
+  </ion-content>
+</ion-modal-view>

@@ -1,0 +1,20 @@
+<ion-view view-title="Studienübersicht">
+  <ion-nav-buttons side="right">
+      <button class="button button-clear" ng-click="synchronizeData()">
+        <i class="icon ion-refresh"></i>
+      </button>
+    </ion-nav-buttons>
+  <ion-content ng-class="{'has-footer': settings.testmode}">
+    <ion-list>
+      <ion-item ng-repeat="study in studies" href="#app/substudy/{{study.id}}">
+        {{study.title}}
+      </ion-item>
+    </ion-list>
+    <h2>{{studystuff}}</h2>
+	<button class="button button-block icon-left ion-plus-circled button-positive" ng-click="showNewStudy()">Neue Studie hinzufügen</button>	
+    <h1>{{settings.testmode}}</h1>
+  </ion-content>
+  <ion-footer-bar class="bar-energized" ng-if="settings.testmode">
+  	<h1 class="title">Testmodus</h1>
+  </ion-footer-bar>
+</ion-view>
