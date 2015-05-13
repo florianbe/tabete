@@ -68,12 +68,26 @@ angular.module('tabete.controllers', [])
   };
 })
 
-.controller('StudiesCtrl', function($scope, $ionicModal, $cordovaBarcodeScanner, $http ) {
+.controller('StudiesCtrl', function($scope, $ionicModal, $cordovaBarcodeScanner, $http, devTest) {
 // DEVTEST Data
   $scope.studies = [
     { title: 'Zeitverwendung im Studienalltag', id: 1 },
     { title: 'Langeweile im Praktikum', id: 2 }
   ];
+  //DEV Buttons
+  $scope.resetDatabase = function() {
+    devTest.devReset();
+    console.log('Datenbank wurde zurückgesetzt');
+  }
+
+  $scope.testHttp = function() {
+    devTest.testHttp();
+  }
+
+  $scope.testDataImport = function() {
+    devTest.testImport();
+  }
+
 })  
 
 .controller('PlaylistsCtrl', function($scope) {
