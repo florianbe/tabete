@@ -68,7 +68,7 @@ angular.module('tabete.controllers', [])
   };
 })
 
-.controller('StudiesCtrl', function($scope, $ionicModal, $cordovaBarcodeScanner, $http, devTest) {
+.controller('StudiesCtrl', function($scope, $ionicModal, $cordovaBarcodeScanner, $http, dataLayer, devTest) {
 // DEVTEST Data
   $scope.studies = [
     { title: 'Zeitverwendung im Studienalltag', id: 1 },
@@ -89,7 +89,11 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.testDatabaseAccess = function() {
-    alert('hello');
+    dataLayer.getStudiesWithSubstudies().then(function (studies) {
+      console.log(studies);
+    }, function (err) {
+      console.error(err);
+    })
   }
 
 })  

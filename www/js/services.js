@@ -168,15 +168,88 @@ angular.module('tabete.services', ['ngCordova'])
 	    	});
 		};
 
+		var _insertStudyData = function(server_id) {
+			var query = "INSERT INTO studies (version, server_id, remote_id, name, description, state, start_date, end_date, finalupload_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			return $cordovaSQLite.execute(db, query, [_jsd.version, server_id, _jsd.id, _jsd.title, _jsd.description, _jsd.state, _jsd.start_date, _jsd.end_date, _jsd.finalupload_date]).then(function (res) {
+				return server_id;
+			}, function(err) {
+				console.error(err);
+			}).then(function (server_id) {
+				var query = "SELECT id FROM studies WHERE server_id = ? AND remote_id = ?";
+				return $cordovaSQLite.execute(db, query, [server_id, _jsd.id]).then(function (res) {
+					if(res.rows.length > 0) {
+	        		return res.rows.item(0).id;
+	            }
+	            else {
+	            	return false;
+	            }}, function (err) {
+	            	console.error(err);
+				})
+			})
+		};
+
+		var _insertSubStudyData = function(study_id) {
+			var defer = $q.defer();
+			var promises = [];
+			var substudies = [];
+
+			function lastTask() {
+				console.log('in lastTask');
+				//return substudies;
+			}
+
+			console.log('in substudy insert');
+			
+
+			angular.forEach( _jsd.substudies, function(substudy) {
+				console.log('in loop');
+				console.log(substudy);
+				var query = "INSERT INTO substudies (version, study_id, title, triggertype, description) VALUES (?, ?, ?, ?, ?)";
+            	return $cordovaSQLite.execute(db, query, [substudy.version, study_id, substudy.title, substudy.trigger, substudy.description])
+            	.then(function(res) {
+                console.log("Write substudy: " + res.rowsAffected);
+
+            		})
+            });
+
+			$q.all(promises).then(lastTask);
+
+			return defer;
+		};
+
 		this.insertStudy = function(studyData, jsonStudyData) {
 			_studyData = studyData;
 			_jsd = jsonStudyData;
-			_getServerId().then(function (server_id) {
-				console.log("server id: " + server_id);
+			_getServerId().then(function(server_id) {
+				return _insertStudyData(server_id);
+			}).then(function(study_id) {
+				console.log('Study inserted: ' + study_id)
+				_insertSubStudyData(study_id);
 			}, function(err) {
 				console.error(err);
 			})
-		}
+		};
+
+
+
+		//GET all studies with substudies
+		this.getStudiesWithSubstudies = function() {
+			var query = "SELECT * FROM studies";
+        	$cordovaSQLite.execute(db, query, []).then(function(res) {
+            	console.log(res);
+				var studies = [];
+            	if(res.rows.length > 0) {
+                	for(var i = 0; i < res.rows.length; i++) {
+                    	studies.push({id: res.rows.item(i).id, name: res.rows.item(i).name});
+                	}
+            	}
+            	return studies;
+        	}, function (err) {
+            	console.error(err);
+        	});
+        }
+
+
 
 		return self;
 	});
