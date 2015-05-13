@@ -1,5 +1,5 @@
 angular.module('tabete.services', ['ngCordova'])
-	.factory('devTest', function($http, $cordovaSQLite, $q) {
+	.factory('devTest', function($http, $cordovaSQLite, $q, dataLayer) {
 		var self = this;
 		// var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
     	var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
@@ -64,14 +64,15 @@ angular.module('tabete.services', ['ngCordova'])
 		};
 
 		this.testImport = function() {
-			// devTest.insertStudy(studyData, data.data.study);
+			this.testHttp();
+			dataLayer.insertStudy(studyData, jsonStudyData);
 			console.log('dev: Data import finished');
 		};
 
 		return self;
 	})
 
-	.factory('dataLayer', function() {
+	.factory('dataLayer', function($http, $cordovaSQLite, $q) {
 		var self = this;
 
 		var _studyAnswers = {};
@@ -150,7 +151,6 @@ angular.module('tabete.services', ['ngCordova'])
 	    				})
 	    			}, function (err) {
 	    				console.error(err);
-	    				return err;
 	    			});
 				}
 	    		else {
@@ -165,7 +165,7 @@ angular.module('tabete.services', ['ngCordova'])
 			_studyData = studyData;
 			_jsd = jsonStudyData;
 			_getServerId().then(function (server_id) {
-				logS("server id: " + server_id);
+				console.log("server id: " + server_id);
 			}, function(err) {
 				console.error(err);
 			})
