@@ -51,15 +51,19 @@ angular.module('tabete.controllers', [])
         $scope.closePassword();
       }
       else {
-        $scope.passworderror = "Falsches Passwort";
+        alert("Falsches Passwort");
       }
     }
     else {
-      $scope.settings.password = $scope.input.password;
-      $scope.settings.passwordset = true;
-      $localstorage.setObject('settings', $scope.settings);
-      $scope.input.password = "";
-      $scope.closePassword();
+      if ($scope.input.password === undefined || $scope.input.password === ""){
+        alert("Das Password darf nicht leer sein");
+      } else {
+        $scope.settings.password = $scope.input.password;
+        $scope.settings.passwordset = true;
+        $localstorage.setObject('settings', $scope.settings);
+        $scope.input.password = "";
+        $scope.closePassword();
+      }
     }
   };
 })
