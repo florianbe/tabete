@@ -1,4 +1,4 @@
-angular.module('starter.controllers', [])
+angular.module('tabete.controllers', [])
 
 .controller('AppCtrl', function($scope, $ionicModal, $timeout) {
   // Form data for the login modal
