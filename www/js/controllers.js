@@ -89,11 +89,7 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.testDatabaseAccess = function() {
-    dataLayer.getStudiesWithSubstudies().then(function (studies) {
-      console.log(studies);
-    }, function (err) {
-      console.error(err);
-    })
+    devTest.testDataBase();
   }
 
 })  

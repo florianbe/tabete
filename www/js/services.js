@@ -1,21 +1,21 @@
 angular.module('tabete.services', ['ngCordova'])
-	.factory('devTest', function($http, $cordovaSQLite, $q, dataLayer) {
+	.factory('devTest', function($ionicPlatform, $http, $cordovaSQLite, $q, dataLayer) {
 		var self = this;
-		var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
-    	// var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
+		// var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
+    	var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
     	// var url = "http://tabea.dev:8080/api/v1/study/getid?study=te_stu&password=geheim";
 
-	    // studyData = {
-	    // 	studyServer: 	'http://tabea.dev:8080',
-	    // 	studyName: 		'te_stu',
-	    // 	studyPassword: 	'geheim'
-	    // };
-
 	    studyData = {
-	    	studyServer: 	'http://anthill-inside.net/tabea_test',
-	    	studyName: 		'zeitver2015',
-	    	studyPassword: 	'zeitver2015'	
-	    }
+	    	studyServer: 	'http://tabea.dev:8080',
+	    	studyName: 		'te_stu',
+	    	studyPassword: 	'geheim'
+	    };
+
+	    // studyData = {
+	    // 	studyServer: 	'http://anthill-inside.net/tabea_test',
+	    // 	studyName: 		'zeitver2015',
+	    // 	studyPassword: 	'zeitver2015'	
+	    // }
 
 	    jsonStudyData = {};
 
@@ -75,6 +75,23 @@ angular.module('tabete.services', ['ngCordova'])
 			dataLayer.insertStudy(studyData, jsonStudyData);
 			console.log('dev: Data import finished');
 		};
+
+		this.testDataBase = function() {
+			var query = "SELECT * FROM substudies";
+			
+			return $cordovaSQLite.execute(db, query).then(function(res) {
+				if(res.rows.length > 0) {
+	        		return res.rows.item(res.rows.length -1).id;
+	            }
+	            else {
+	            	return false;
+	            }
+			}, function (err) {
+				console.error(err);
+			}).then( function (res) {
+				console.log(res);
+			})
+		}
 
 		return self;
 	})
@@ -178,7 +195,7 @@ angular.module('tabete.services', ['ngCordova'])
 				var query = "SELECT id FROM studies WHERE server_id = ? AND remote_id = ?";
 				return $cordovaSQLite.execute(db, query, [server_id, _jsd.id]).then(function (res) {
 					if(res.rows.length > 0) {
-	        		return res.rows.item(0).id;
+	        		return res.rows.item(res.rows.length -1).id;
 	            }
 	            else {
 	            	return false;
@@ -203,18 +220,46 @@ angular.module('tabete.services', ['ngCordova'])
 
 			angular.forEach( _jsd.substudies, function(substudy) {
 				console.log('in loop');
-				console.log(substudy);
+				
 				var query = "INSERT INTO substudies (version, study_id, title, triggertype, description) VALUES (?, ?, ?, ?, ?)";
             	return $cordovaSQLite.execute(db, query, [substudy.version, study_id, substudy.title, substudy.trigger, substudy.description])
             	.then(function(res) {
-                console.log("Write substudy: " + res.rowsAffected);
+                	var query_select = "SELECT id FROM substudies WHERE study_id = ? AND title = ?";
+                	return $cordovaSQLite.execute(db, query_select, [study_id, substudy.title])
+                	.then(function(res){
+                		sustu_id = res.rows.item(0).id;
+                		// insert signal points if study is signalbased
+                		if (substudy.trigger === 'FIX' || substudy.trigger === 'FLEX') {
+                			_insertSignalPoints(sustu_id, substudy.trigger_signals);
+                		}
+                		_insertQuestionGroups(sustu_id, substudy.questiongroups);
 
-            		})
+                	})
+        		})
             });
 
 			$q.all(promises).then(lastTask);
 
 			return defer;
+		};
+
+		var _insertSignalPoints = function (substudy_id, signalpoints) {
+			angular.forEach(signalpoints, function (signalpoint) {
+				var query = "INSERT INTO signalpoints (substudy_id, signal_date) VALUES (?, ?)";
+				$cordovaSQLite.execute(db, query, [substudy_id, signalpoint.time]).then(function (res) {
+					console.log("Signal time inserted:" + signalpoint.time);
+				})
+			})
+		};
+
+
+		var _insertQuestionGroups = function (substudy_id, questiongroups) {
+			angular.forEach(questiongroups, function (questiongroup) {
+			var query ="INSERT INTO questiongroups (version, substudy_id, name, sequence_id, randomorder) VALUES (?, ?, ?, ?, ?)";
+			$cordovaSQLite.execute(db, query, [questiongroup.version, substudy_id, questiongroup.name, questiongroup.seq_id, questiongroup.randomorder === true ? 1 : 0]).then(function (res) {
+				console.log("questiongroup inserted:" + questiongroup.name);
+				})
+			})
 		};
 
 		this.insertStudy = function(studyData, jsonStudyData) {
