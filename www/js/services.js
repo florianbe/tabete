@@ -46,7 +46,7 @@ angular.module('tabete.services', ['ngCordova'])
 		    //QUESTION GROUPS
 		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questiongroups (id integer primary key, version integer, substudy_id integer, name text, sequence_id integer, randomorder integer)");
 		    //RULES
-		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS rules (id integer primary key, questiongroup_id integer, question_id integer, answer_value text)");
+		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS rules (id integer primary key, questiongroup_id integer, question_remote_id integer, answer_value text)");
 		    //QUESTIONS
 		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questions (id integer primary key, remote_id integer, version integer, questiongroup_id integer, sequence_id integer, type text, mandatory integer, text text, min text, max text, step text)");
 		    //QUESTIONS OPTIONS
@@ -206,20 +206,7 @@ angular.module('tabete.services', ['ngCordova'])
 		};
 
 		var _insertSubStudyData = function(study_id) {
-			var defer = $q.defer();
-			var promises = [];
-			var substudies = [];
-
-			function lastTask() {
-				console.log('in lastTask');
-				//return substudies;
-			}
-
-			console.log('in substudy insert');
-			
-
 			angular.forEach( _jsd.substudies, function(substudy) {
-				console.log('in loop');
 				
 				var query = "INSERT INTO substudies (version, study_id, title, triggertype, description) VALUES (?, ?, ?, ?, ?)";
             	return $cordovaSQLite.execute(db, query, [substudy.version, study_id, substudy.title, substudy.trigger, substudy.description])
@@ -238,31 +225,75 @@ angular.module('tabete.services', ['ngCordova'])
         		})
             });
 
-			$q.all(promises).then(lastTask);
-
-			return defer;
 		};
 
 		var _insertSignalPoints = function (substudy_id, signalpoints) {
 			angular.forEach(signalpoints, function (signalpoint) {
 				var query = "INSERT INTO signalpoints (substudy_id, signal_date) VALUES (?, ?)";
-				$cordovaSQLite.execute(db, query, [substudy_id, signalpoint.time]).then(function (res) {
-					console.log("Signal time inserted:" + signalpoint.time);
-				})
+				$cordovaSQLite.execute(db, query, [substudy_id, signalpoint.time]);
 			})
 		};
 
 
 		var _insertQuestionGroups = function (substudy_id, questiongroups) {
 			angular.forEach(questiongroups, function (questiongroup) {
-			var query ="INSERT INTO questiongroups (version, substudy_id, name, sequence_id, randomorder) VALUES (?, ?, ?, ?, ?)";
-			$cordovaSQLite.execute(db, query, [questiongroup.version, substudy_id, questiongroup.name, questiongroup.seq_id, questiongroup.randomorder === true ? 1 : 0]).then(function (res) {
-				console.log("questiongroup inserted:" + questiongroup.name);
+				var query ="INSERT INTO questiongroups (version, substudy_id, name, sequence_id, randomorder) VALUES (?, ?, ?, ?, ?)";
+				$cordovaSQLite.execute(db, query, [questiongroup.version, substudy_id, questiongroup.name, questiongroup.seq_id, questiongroup.randomorder === true ? 1 : 0]).then(function (res) {
+					var query_select = "SELECT id FROM questiongroups WHERE substudy_id = ? AND sequence_id = ?";
+					$cordovaSQLite.execute(db, query_select, [substudy_id, questiongroup.seq_id]).then(function (res2) {
+						var qg_id = res2.rows.item(0).id;
+						_insertQuestions(qg_id, questiongroup.questions);
+						
+						if (questiongroup.rules !== undefined) {
+							_insertRules(qg_id, questiongroup.rules);
+						}
+					}, function (err) {
+						console.error(err);
+					})
+
 				})
+
+			})
+		}
+
+
+		var _insertRules = function (questiongroup_id, rules) {
+			angular.forEach(rules, function (rule) {
+				var query="INSERT INTO rules (questiongroup_id, question_remote_id, answer_value) VALUES (?, ?, ?)";
+				$cordovaSQLite.execute(db, query, [questiongroup_id, rule.question_id, rule.answer_value]).then(function (res) {
+				}, function (err) {
+					console.error(err);
+				})
+			})
+		}
+
+		var _insertQuestions = function (questiongroup_id, questions) {
+			angular.forEach(questions, function (question) {
+				var query="INSERT INTO questions (remote_id, version, questiongroup_id, sequence_id, type, 	mandatory, text, min, max, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+				$cordovaSQLite.execute(db, query, [question.id, question.version, questiongroup_id, question.seq_id, question.type, question.mandatory === true ? 1 : 0, question.text, question.min === false ? 'NO' : question.min, question.max === false ? 'NO' : question.max, question.step === false ? 'NO' : question.step]).then(function (res) {
+					if (question.type === 'SINGLECHOICE' || question.type === 'MULTICHOICE') {
+						var query_select = "SELECT id FROM questions WHERE remote_id = ? AND questiongroup_id = ?";
+						$cordovaSQLite.execute(db, query_select, [question.id, questiongroup_id]).then(function (res2) {
+							var q_id = res2.rows.item(0).id;
+							_insertQuestionOptions(q_id, question.options);
+						})
+					}
+				})		
+			})
+		};
+
+		var _insertQuestionOptions = function (q_id, options) {
+			angular.forEach(options, function (option) {
+				var query = "INSERT INTO questionoptions (question_id, code, description, value) VALUES (?, ?, ?, ?)";
+				$cordovaSQLite.execute(db, query, [q_id, option.code, option.description, option.value]);
 			})
 		};
 
 		this.insertStudy = function(studyData, jsonStudyData) {
+			var defer = $q.defer();
+			var promises = [];
+			var substudies = [];
+
 			_studyData = studyData;
 			_jsd = jsonStudyData;
 			_getServerId().then(function(server_id) {
@@ -272,7 +303,14 @@ angular.module('tabete.services', ['ngCordova'])
 				_insertSubStudyData(study_id);
 			}, function(err) {
 				console.error(err);
-			})
+			}).catch(function(err) {
+      			console.error(err);
+			});
+
+
+			$q.all(promises);
+
+			return defer;
 		};
 
 

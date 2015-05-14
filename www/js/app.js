@@ -39,7 +39,7 @@ angular.module('tabete', ['ionic', 'ionic.utils', 'ngCordova', 'tabete.services'
     //QUESTION GROUPS
     $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questiongroups (questiongroup_id integer primary key, version integer, substudy_id integer, name text, sequence_id integer, randomorder integer)");
     //RULES
-    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS rules (rule_id integer primary key, questiongroup_id integer, question_id integer, answer_value text)");
+    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS rules (rule_id integer primary key, questiongroup_id integer, question_remote_id integer, answer_value text)");
     //QUESTIONS
     $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questions (question_id integer primary key, remote_id integer, version integer, questiongroup_id integer, sequence_id integer, type text, mandatory integer, text text, min text, max text, step text)");
     //QUESTIONS OPTIONS
