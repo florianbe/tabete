@@ -28,25 +28,24 @@ angular.module('tabete', ['ionic', 'ionic.utils', 'ngCordova', 'tabete.services'
     }
 
     //Database: create tables
-    //SERVERS
-    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS servers (server_id integer primary key, url text, subject_id integer, subject_name text)");
-    //STUDIES
-    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS studies (study_id integer primary key, version integer, server_id integer, remote_id integer, name text, short_name text, description text, state text, start_date text, end_date text, finalupload_date text)");
-    //SUBSTUDIES
-    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS substudies (substudy_id integer primary key, version integer, study_id integer, title text, triggertype text, description text)");
-    //SIGNAL POINTS
-    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS signalpoints (signalpoint_id integer primary key, substudy_id integer, signal_date text)");
-    //QUESTION GROUPS
-    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questiongroups (questiongroup_id integer primary key, version integer, substudy_id integer, name text, sequence_id integer, randomorder integer)");
-    //RULES
-    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS rules (rule_id integer primary key, questiongroup_id integer, question_remote_id integer, answer_value text)");
-    //QUESTIONS
-    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questions (question_id integer primary key, remote_id integer, version integer, questiongroup_id integer, sequence_id integer, type text, mandatory integer, text text, min text, max text, step text)");
-    //QUESTIONS OPTIONS
-    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questionoptions (questionoption_id integer primary key, question_id integer, code text, description text, value text)");
-    //ANSWERS
-    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS answers (answer_id integer primary key, question_id integer, answer text, testanswer integer, answer_date text, signal_date text)");
-
+        //SERVERS
+        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS servers (id integer primary key, url text, subject_id integer, subject_name text)");
+        //STUDIES
+        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS studies (id integer primary key, version integer, server_id integer, remote_id integer, name text, description text, state text, start_date text, end_date text, finalupload_date text)");
+        //SUBSTUDIES
+        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS substudies (id integer primary key, version integer, study_id integer, title text, triggertype text, description text)");
+        //SIGNAL POINTS
+        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS signalpoints (id integer primary key, substudy_id integer, signal_date text)");
+        //QUESTION GROUPS
+        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questiongroups (id integer primary key, version integer, substudy_id integer, name text, sequence_id integer, randomorder integer)");
+        //RULES
+        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS rules (id integer primary key, questiongroup_id integer, question_remote_id integer, answer_value text)");
+        //QUESTIONS
+        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questions (id integer primary key, remote_id integer, version integer, questiongroup_id integer, sequence_id integer, type text, mandatory integer, text text, min text, max text, step text)");
+        //QUESTIONS OPTIONS
+        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questionoptions (id integer primary key, question_id integer, code text, description text, value text)");
+        //ANSWERS
+        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS answers (id integer primary key, question_id integer, answer text, testanswer integer, answer_date text, signal_date text)");
   });
 })
 

@@ -77,19 +77,9 @@ angular.module('tabete.services', ['ngCordova'])
 		};
 
 		this.testDataBase = function() {
-			var query = "SELECT * FROM substudies";
-			
-			return $cordovaSQLite.execute(db, query).then(function(res) {
-				if(res.rows.length > 0) {
-	        		return res.rows.item(res.rows.length -1).id;
-	            }
-	            else {
-	            	return false;
-	            }
-			}, function (err) {
-				console.error(err);
-			}).then( function (res) {
-				console.log(res);
+			return dataLayer.getStudiesWithSubstudies().then(function (res) {
+				console.log(res[0]);
+				console.log(Date.parse(res[0].start_date) > Date.now());
 			})
 		}
 
@@ -185,6 +175,7 @@ angular.module('tabete.services', ['ngCordova'])
 	    	});
 		};
 
+		// Insert Study Data to Database 
 		var _insertStudyData = function(server_id) {
 			var query = "INSERT INTO studies (version, server_id, remote_id, name, description, state, start_date, end_date, finalupload_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 			return $cordovaSQLite.execute(db, query, [_jsd.version, server_id, _jsd.id, _jsd.title, _jsd.description, _jsd.state, _jsd.start_date, _jsd.end_date, _jsd.finalupload_date]).then(function (res) {
@@ -205,6 +196,7 @@ angular.module('tabete.services', ['ngCordova'])
 			})
 		};
 
+		// Insert Substudy Data to Database
 		var _insertSubStudyData = function(study_id) {
 			angular.forEach( _jsd.substudies, function(substudy) {
 				
@@ -227,6 +219,7 @@ angular.module('tabete.services', ['ngCordova'])
 
 		};
 
+		// Insert Signal Points to Database
 		var _insertSignalPoints = function (substudy_id, signalpoints) {
 			angular.forEach(signalpoints, function (signalpoint) {
 				var query = "INSERT INTO signalpoints (substudy_id, signal_date) VALUES (?, ?)";
@@ -234,7 +227,7 @@ angular.module('tabete.services', ['ngCordova'])
 			})
 		};
 
-
+		// Insert Question Groups to Database
 		var _insertQuestionGroups = function (substudy_id, questiongroups) {
 			angular.forEach(questiongroups, function (questiongroup) {
 				var query ="INSERT INTO questiongroups (version, substudy_id, name, sequence_id, randomorder) VALUES (?, ?, ?, ?, ?)";
@@ -256,7 +249,7 @@ angular.module('tabete.services', ['ngCordova'])
 			})
 		}
 
-
+		// Insert Rules to Database
 		var _insertRules = function (questiongroup_id, rules) {
 			angular.forEach(rules, function (rule) {
 				var query="INSERT INTO rules (questiongroup_id, question_remote_id, answer_value) VALUES (?, ?, ?)";
@@ -267,6 +260,7 @@ angular.module('tabete.services', ['ngCordova'])
 			})
 		}
 
+		// Insert Questions to Database
 		var _insertQuestions = function (questiongroup_id, questions) {
 			angular.forEach(questions, function (question) {
 				var query="INSERT INTO questions (remote_id, version, questiongroup_id, sequence_id, type, 	mandatory, text, min, max, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -282,6 +276,7 @@ angular.module('tabete.services', ['ngCordova'])
 			})
 		};
 
+		// Insert Question Options to Database
 		var _insertQuestionOptions = function (q_id, options) {
 			angular.forEach(options, function (option) {
 				var query = "INSERT INTO questionoptions (question_id, code, description, value) VALUES (?, ?, ?, ?)";
@@ -289,6 +284,7 @@ angular.module('tabete.services', ['ngCordova'])
 			})
 		};
 
+		// Wrapper function to insert Data from Study JSON object into Database
 		this.insertStudy = function(studyData, jsonStudyData) {
 			var defer = $q.defer();
 			var promises = [];
@@ -314,19 +310,41 @@ angular.module('tabete.services', ['ngCordova'])
 		};
 
 
+ //    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS substudies (substudy_id integer primary key, version integer, study_id integer, title text, triggertype text, description text)");
 
-		//GET all studies with substudies
+
+		//Get all studies with substudies
 		this.getStudiesWithSubstudies = function() {
-			var query = "SELECT * FROM studies";
-        	$cordovaSQLite.execute(db, query, []).then(function(res) {
-            	console.log(res);
-				var studies = [];
-            	if(res.rows.length > 0) {
-                	for(var i = 0; i < res.rows.length; i++) {
-                    	studies.push({id: res.rows.item(i).id, name: res.rows.item(i).name});
-                	}
-            	}
-            	return studies;
+			var query = "SELECT s.id AS s_id, s.name AS s_name, s.description AS s_description, s.state AS state, s.start_date AS start_date, s.end_date AS end_date, s.finalupload_date AS finalupload_date, ss.id AS ss_id, ss.title AS ss_title, ss.triggertype AS triggertype, ss.description AS ss_description FROM STUDIES s INNER JOIN substudies ss ON s.id = ss.study_id ORDER BY s.id, ss.id";
+        	return $cordovaSQLite.execute(db, query, []).then(function(res) {
+        		var studies = [];
+        		console.log(res.rows);
+        		if (res.rows.length > 0) {
+        			for(var i = 0; i < res.rows.length; i++) {
+        				var study = {
+	        	          		id: 			res.rows.item(i).s_id, 
+	                    		name: 			res.rows.item(i).s_name,
+	                    		description: 	res.rows.item(i).s_description,
+	                    		state: 			res.rows.item(i).state,
+	                    		start_date: 	res.rows.item(i).start_date,
+	                    		end_date: 		res.rows.item(i).end_date,
+	                    		finalupload_date: 	res.rows.item(i).finalupload_date  					
+        					}
+        					study.substudies = [];
+        				for(var j = 0; j < res.rows.length; j++) {
+        					if (res.rows.item(i).s_id === res.rows.item(j).s_id ) {
+        						study.substudies.push({
+		        					 id: 			res.rows.item(j).ss_id, 
+		        					 title: 		res.rows.item(j).ss_title,
+		        					 triggertype:	res.rows.item(j).triggertype,
+		        					 description:	res.rows.item(j).ss_description        							
+        						})
+        					}
+        				}
+        				studies.push(study);
+        			}
+        		}
+        		return studies;
         	}, function (err) {
             	console.error(err);
         	});
