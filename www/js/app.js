@@ -4,7 +4,7 @@
 // 'starter' is the name of this angular module example (also set in a <body> attribute in index.html)
 // the 2nd parameter is an array of 'requires'
 // 'starter.controllers' is found in controllers.js
-angular.module('tabete', ['ionic', 'ionic.utils', 'ngCordova', 'tabete.services', 'tabete.controllers'])
+angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', 'ngCordova', 'tabete.services', 'tabete.controllers'])
 
 .run(function($ionicPlatform, $cordovaSQLite) {
   $ionicPlatform.ready(function() {

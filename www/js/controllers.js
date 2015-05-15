@@ -68,9 +68,9 @@ angular.module('tabete.controllers', [])
   };
 })
 
-.controller('StudiesCtrl', function($scope, $ionicModal, $cordovaBarcodeScanner, $http, dataLayer, devTest) {
+.controller('StudiesCtrl', function($scope, $ionicModal, $ionicPopup, $cordovaBarcodeScanner, $http, dataLayer, devTest) {
 // DEVTEST Data
-  $scope.studies = [
+  $scope.t_studies = [
     { title: 'Zeitverwendung im Studienalltag', id: 1 },
     { title: 'Langeweile im Praktikum', id: 2 }
   ];
@@ -81,7 +81,8 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.testHttp = function() {
-    devTest.testHttp();
+    // devTest.testHttp();
+
   }
 
   $scope.testDataImport = function() {
@@ -91,6 +92,31 @@ angular.module('tabete.controllers', [])
   $scope.testDatabaseAccess = function() {
     devTest.testDataBase();
   }
+
+  $scope.substudies = [];
+  $scope.substudies = null;
+
+  $scope.updateStudies = function () {
+    dataLayer.getStudiesWithSubstudies().then(function (res) {
+        console.log(res);
+        $scope.substudies = res;
+
+      })
+  };
+
+  $scope.showSubstudyInfo = function(substudyId) {
+    
+    dataLayer.getSubstudyInfo(substudyId).then(function (res) {
+      var alertPopup = $ionicPopup.alert({
+        title: 'Studieninformationen',
+        template: '<p><strong>Ihre ID:</strong> ' + res.subject_id + '</p>'+ '<p><strong>Beschreibung für ' + res.study_name + ':</strong> ' + res.study_description + '</p><p>' + res.substudy_description + '</p>'
+      });
+      alertPopup;
+    })
+  };
+
+  $scope.updateStudies();
+
 
 })  
 

@@ -77,10 +77,14 @@ angular.module('tabete.services', ['ngCordova'])
 		};
 
 		this.testDataBase = function() {
-			return dataLayer.getStudiesWithSubstudies().then(function (res) {
+			
+			dataLayer.deleteStudyByStudyId(1).then(function () {
+				dataLayer.getStudiesWithSubstudies().then(function (res) {
 				console.log(res[0]);
-				console.log(Date.parse(res[0].start_date) > Date.now());
-			})
+				
+				})				
+			});
+
 		}
 
 		return self;
@@ -310,45 +314,130 @@ angular.module('tabete.services', ['ngCordova'])
 		};
 
 
- //    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS substudies (substudy_id integer primary key, version integer, study_id integer, title text, triggertype text, description text)");
-
-
 		//Get all studies with substudies
 		this.getStudiesWithSubstudies = function() {
-			var query = "SELECT s.id AS s_id, s.name AS s_name, s.description AS s_description, s.state AS state, s.start_date AS start_date, s.end_date AS end_date, s.finalupload_date AS finalupload_date, ss.id AS ss_id, ss.title AS ss_title, ss.triggertype AS triggertype, ss.description AS ss_description FROM STUDIES s INNER JOIN substudies ss ON s.id = ss.study_id ORDER BY s.id, ss.id";
+			var query = "SELECT s.id AS s_id, s.name AS s_name, s.description AS s_description, s.state AS state, s.start_date AS start_date, s.end_date AS end_date, s.finalupload_date AS finalupload_date, ss.id AS ss_id, ss.title AS ss_title, ss.triggertype AS triggertype, ss.description AS ss_description FROM studies s INNER JOIN substudies ss ON s.id = ss.study_id ORDER BY s.id, ss.id";
         	return $cordovaSQLite.execute(db, query, []).then(function(res) {
-        		var studies = [];
-        		console.log(res.rows);
+        		var substudies = [];
         		if (res.rows.length > 0) {
         			for(var i = 0; i < res.rows.length; i++) {
-        				var study = {
-	        	          		id: 			res.rows.item(i).s_id, 
-	                    		name: 			res.rows.item(i).s_name,
-	                    		description: 	res.rows.item(i).s_description,
-	                    		state: 			res.rows.item(i).state,
-	                    		start_date: 	res.rows.item(i).start_date,
-	                    		end_date: 		res.rows.item(i).end_date,
-	                    		finalupload_date: 	res.rows.item(i).finalupload_date  					
-        					}
-        					study.substudies = [];
-        				for(var j = 0; j < res.rows.length; j++) {
-        					if (res.rows.item(i).s_id === res.rows.item(j).s_id ) {
-        						study.substudies.push({
-		        					 id: 			res.rows.item(j).ss_id, 
-		        					 title: 		res.rows.item(j).ss_title,
-		        					 triggertype:	res.rows.item(j).triggertype,
-		        					 description:	res.rows.item(j).ss_description        							
-        						})
-        					}
-        				}
-        				studies.push(study);
+        				substudies.push({
+	        	          		study_id:			res.rows.item(i).s_id, 
+	                    		study_name:			res.rows.item(i).s_name,
+	                    		study_description: 	res.rows.item(i).s_description,
+	                    		state: 				res.rows.item(i).state,
+	                    		start_date: 		res.rows.item(i).start_date,
+	                    		end_date: 			res.rows.item(i).end_date,
+	                    		finalupload_date: 	res.rows.item(i).finalupload_date,
+	                    		substudy_id: 		res.rows.item(i).ss_id, 
+		        				substudy_title: 	res.rows.item(i).ss_title,
+		        				triggertype:		res.rows.item(i).triggertype,
+		        				substudy_description: res.rows.item(i).ss_description
+      					});
         			}
         		}
-        		return studies;
+        		return substudies;
         	}, function (err) {
             	console.error(err);
         	});
         }
+
+
+		//Get info for substudy defined by given id
+		this.getSubstudyInfo = function (substudyId) {
+			var query = "SELECT s.id AS s_id, s.name AS s_name, s.description AS s_description, s.state AS state, s.start_date AS start_date, s.end_date AS end_date, s.finalupload_date AS finalupload_date, ss.id AS ss_id, ss.title AS ss_title, ss.triggertype AS triggertype, ss.description AS ss_description, ser.subject_name as subject_name FROM substudies ss INNER JOIN studies s ON s.id = ss.study_id INNER JOIN servers ser ON s.server_id = ser.id WHERE ss.id = ?";
+        	return $cordovaSQLite.execute(db, query, [substudyId]).then(function(res) {
+        		substudy = {};
+        		substudy = null;
+        		if (res.rows.length > 0) {
+    				substudy = {
+        	          		study_id:			res.rows.item(0).s_id, 
+                    		study_name:			res.rows.item(0).s_name,
+                    		study_description: 	res.rows.item(0).s_description,
+                    		state: 				res.rows.item(0).state,
+                    		start_date: 		res.rows.item(0).start_date,
+                    		end_date: 			res.rows.item(0).end_date,
+                    		finalupload_date: 	res.rows.item(0).finalupload_date,
+                    		substudy_id: 		res.rows.item(0).ss_id, 
+	        				substudy_title: 	res.rows.item(0).ss_title,
+	        				triggertype:		res.rows.item(0).triggertype,
+	        				substudy_description: res.rows.item(0).ss_description,
+	        				subject_id: 		res.rows.item(0).subject_name
+  					};
+        		}
+        		return substudy;
+        	}, function (err) {
+            	console.error(err);
+        	});
+        }
+
+        //Delete study with given id
+        //DELETE a complete study by studyId
+		this.deleteStudyByStudyId = function(studyId) {
+			//answers
+			var query = "DELETE FROM answers WHERE question_id IN (SELECT q.id FROM questions q INNER JOIN questiongroups qg ON q.questiongroup_id = qg.id INNER JOIN substudies ss ON qg.substudy_id = ss.id WHERE ss.study_id = ?)";
+			return $cordovaSQLite.execute(db, query, [studyId]).then(function(res){
+				console.log("Deleted; answers for study " + studyId + ". Rows affected: " + res.rowsAffected);
+				return studyId;
+			}, function (err){ 
+				console.error(err);
+			}).then(function (studyId) {
+			//questionoptions
+				var query = "DELETE FROM questionoptions WHERE question_id IN (SELECT q.id FROM questions q INNER JOIN questiongroups qg ON q.questiongroup_id = qg.id INNER JOIN substudies ss ON qg.substudy_id = ss.id WHERE ss.study_id = ?)";
+				return $cordovaSQLite.execute(db, query, [studyId]).then(function(res){
+					console.log("Deleted: questionoptions for study " + studyId + ". Rows affected: " + res.rowsAffected);
+					return studyId;
+			}, function (err){
+				console.error(err);
+			})}).then(function (studyId) {
+			//questions
+				var query = "DELETE FROM questions WHERE questiongroup_id IN (SELECT qg.id FROM questiongroups qg INNER JOIN substudies ss ON qg.substudy_id = ss.id WHERE ss.study_id = ?)";
+				return $cordovaSQLite.execute(db, query, [studyId]).then(function(res){
+					console.log("Deleted: questions for study " + studyId + ". Rows affected: " + res.rowsAffected);
+					return studyId;
+			}, function (err){
+				console.error(err);
+			})}).then(function (studyId) {
+			//rules
+				var query = "DELETE FROM rules WHERE questiongroup_id IN (SELECT qg.id FROM questiongroups qg INNER JOIN substudies ss ON qg.substudy_id = ss.id WHERE ss.study_id = ?)";
+				return $cordovaSQLite.execute(db, query, [studyId]).then(function(res){
+					console.log("Deleted: rules for study " + studyId + ". Rows affected: " + res.rowsAffected);
+					return studyId;
+			}, function (err){
+				console.error(err);
+			})}).then(function (studyId) {
+			//questiongoups
+				var query = "DELETE FROM questiongroups WHERE substudy_id IN (SELECT id FROM substudies WHERE study_id = ?)";
+				return $cordovaSQLite.execute(db, query, [studyId]).then(function(res){
+					console.log("Deleted: questiongroups for study " + studyId + ". Rows affected: " + res.rowsAffected);
+					return studyId;
+			}, function (err){
+				console.error(err);
+			})}).then(function (studyId) {
+			//signal points
+				var query = "DELETE FROM signalpoints WHERE substudy_id IN (SELECT id FROM substudies WHERE study_id = ?)";
+				return $cordovaSQLite.execute(db, query, [studyId]).then(function(res){
+					console.log("Deleted: signalpoints for study " + studyId + ". Rows affected: " + res.rowsAffected);
+					return studyId;
+			}, function (err){
+				console.error(err);
+			})}).then(function (studyId) {
+			//substudies
+				var query = "DELETE FROM substudies WHERE study_id = ?";
+				return $cordovaSQLite.execute(db, query, [studyId]).then(function(res){
+					console.log("Deleted: substudies for study " + studyId + ". Rows affected: " + res.rowsAffected);
+					return studyId;
+			}, function (err){
+				console.error(err);
+			})}).then(function (studyId) {
+			//study
+				var query = "DELETE FROM studies WHERE id = ?";
+				return $cordovaSQLite.execute(db, query, [studyId]).then(function(res){
+					console.log("Deleted: study " + studyId + ". Rows affected: " + res.rowsAffected);
+			}, function (err){
+				console.error(err);
+			})})
+		};
 
 
 
