@@ -70,11 +70,12 @@ angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', '
     })
 
   .state('app.questiongroup', {
-    url: "substudy/:sustuId",
+    cache: false,
+    url: "questiongroup/:questiongroupId",
     views: {
       'menuContent': {
         templateUrl: "templates/questiongroup.html",
-        controller: 'QuestionGroupCtrl'
+        controller: 'QuestiongroupCtrl',
       }
     }
   });
