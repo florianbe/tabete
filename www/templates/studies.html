@@ -20,21 +20,7 @@
         Es konnten keine Studien gefunden werden
       </ion-item>
     </ion-list>
-    
-
-<!--     <ion-list>
-      <ion-item ng-repeat="(substudies, studies) in studies" class="item-divider">
-        {{study.name}}
-        <ion-list>
-           <ion-item ng-repeat="substudy in substudies">
-             {{substudy.title}}
-           </ion-item>
-        </ion-list>
-      </ion-item>
-    </ion-list>
- -->
-
-	<button class="button button-block icon-left ion-plus-circled button-positive" ng-click="showNewStudy()">Neue Studie hinzufügen</button>	
+  <button class="button button-block icon-left ion-plus-circled button-positive" ng-click="showNewStudy()">Neue Studie hinzufügen</button>	
     <h1>{{settings.testmode}}</h1>
   <button class="button button-block" ng-click="resetDatabase()">Reset Database</button>  
   <button class="button button-block" ng-click="testHttp()">Test http stuff</button>

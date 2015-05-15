@@ -1,21 +1,21 @@
 angular.module('tabete.services', ['ngCordova'])
 	.factory('devTest', function($ionicPlatform, $http, $cordovaSQLite, $q, dataLayer) {
 		var self = this;
-		// var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
-    	var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
+		var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
+    	// var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
     	// var url = "http://tabea.dev:8080/api/v1/study/getid?study=te_stu&password=geheim";
 
-	    studyData = {
-	    	studyServer: 	'http://tabea.dev:8080',
-	    	studyName: 		'te_stu',
-	    	studyPassword: 	'geheim'
-	    };
-
 	    // studyData = {
-	    // 	studyServer: 	'http://anthill-inside.net/tabea_test',
-	    // 	studyName: 		'zeitver2015',
-	    // 	studyPassword: 	'zeitver2015'	
-	    // }
+	    // 	studyServer: 	'http://tabea.dev:8080',
+	    // 	studyName: 		'te_stu',
+	    // 	studyPassword: 	'geheim'
+	    // };
+
+	    studyData = {
+	    	studyServer: 	'http://anthill-inside.net/tabea_test',
+	    	studyName: 		'zeitver2015',
+	    	studyPassword: 	'zeitver2015'	
+	    }
 
 	    jsonStudyData = {};
 

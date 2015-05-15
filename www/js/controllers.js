@@ -68,7 +68,7 @@ angular.module('tabete.controllers', [])
   };
 })
 
-.controller('StudiesCtrl', function($scope, $ionicModal, $ionicPopup, $cordovaBarcodeScanner, $http, dataLayer, devTest) {
+.controller('StudiesCtrl', function($scope, $ionicPlatform, $ionicModal, $ionicPopup, $cordovaBarcodeScanner, $http, dataLayer, devTest) {
 // DEVTEST Data
   $scope.t_studies = [
     { title: 'Zeitverwendung im Studienalltag', id: 1 },
@@ -106,11 +106,13 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.updateStudies = function () {
-    dataLayer.getStudiesWithSubstudies().then(function (res) {
+    $ionicPlatform.ready(function() 
+      { dataLayer.getStudiesWithSubstudies().then(function (res) {
         console.log(res);
         $scope.substudies = res;
 
       })
+    })
   };
 
   $scope.showSubstudyInfo = function(substudyId) {
