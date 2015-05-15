@@ -96,6 +96,15 @@ angular.module('tabete.controllers', [])
   $scope.substudies = [];
   $scope.substudies = null;
 
+  $scope.hasSubstudies = function() {
+    if ($scope.substudies !== undefined && $scope.substudies !== null && $scope.substudies.length > 0) {
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
   $scope.updateStudies = function () {
     dataLayer.getStudiesWithSubstudies().then(function (res) {
         console.log(res);
