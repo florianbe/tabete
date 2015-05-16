@@ -77,11 +77,13 @@ angular.module('tabete.controllers', [])
   //DEV Buttons
   $scope.resetDatabase = function() {
     devTest.devReset();
+    $scope.updateStudies();
     console.log('Datenbank wurde zurückgesetzt');
   }
 
   $scope.testHttp = function() {
     devTest.testHttp();
+    $scope.updateStudies();
 
   }
 
@@ -96,7 +98,8 @@ angular.module('tabete.controllers', [])
   $scope.substudies = [];
   $scope.substudies = null;
   $scope.hasSubstudies = false;
-  
+  $scope.allowSideMenu = true;
+
 
   $scope.checkForSubstudies = function() {
     if ($scope.substudies !== undefined && $scope.substudies !== null && $scope.substudies.length > 0) {
@@ -129,11 +132,30 @@ angular.module('tabete.controllers', [])
   };
 
   $scope.loadSubstudy = function(substudyId) {
+    var substudyData = {};
+    
     dataLayer.startSubstudy(substudyId).then(function (res) {
-      $state.go('app.questiongroup', {'questiongroupId': substudyId});
-    }, function (err) {
-      console.error(err);
-    });
+    dataLayer.getQuestiongroup(res.id).then(function (res2) {
+      console.log("QG ID:");
+      console.log(res);
+      console.log("QG Data:");
+      console.log(res2);
+      return res2.id;
+      }).then(function (qgId) {
+        dataLayer.getQuestionsByQuestiongroupId(qgId).then(function (questions) {
+          console.log(questions);
+        });
+      })
+      })
+      
+  
+
+    
+
+    //   $state.go('app.questiongroup', {'questiongroupId': substudyId});
+    // }, function (err) {
+    //   console.error(err);
+    // });
   }
 
   $scope.updateStudies();
@@ -149,6 +171,8 @@ angular.module('tabete.controllers', [])
   //Disable Side Menu
   $scope.allowSideMenu = false;
 
+  console.log($stateParams.questiongroupId);
+  console.log($scope.allowSideMenu);
 
 })  
 

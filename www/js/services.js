@@ -1,21 +1,21 @@
 angular.module('tabete.services', ['ngCordova'])
 	.factory('devTest', function($ionicPlatform, $http, $cordovaSQLite, $q, dataLayer) {
 		var self = this;
-		// var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
-    	var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
+		var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
+    	// var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
     	// var url = "http://tabea.dev:8080/api/v1/study/getid?study=te_stu&password=geheim";
 
-	    studyData = {
-	    	studyServer: 	'http://tabea.dev:8080',
-	    	studyName: 		'te_stu',
-	    	studyPassword: 	'geheim'
-	    };
-
 	    // studyData = {
-	    // 	studyServer: 	'http://anthill-inside.net/tabea_test',
-	    // 	studyName: 		'zeitver2015',
-	    // 	studyPassword: 	'zeitver2015'	
-	    // }
+	    // 	studyServer: 	'http://tabea.dev:8080',
+	    // 	studyName: 		'te_stu',
+	    // 	studyPassword: 	'geheim'
+	    // };
+
+	    studyData = {
+	    	studyServer: 	'http://anthill-inside.net/tabea_test',
+	    	studyName: 		'zeitver2015',
+	    	studyPassword: 	'zeitver2015'	
+	    }
 
 	    jsonStudyData = {};
 
@@ -267,6 +267,7 @@ angular.module('tabete.services', ['ngCordova'])
 		// Insert Questions to Database
 		var _insertQuestions = function (questiongroup_id, questions) {
 			angular.forEach(questions, function (question) {
+				console.log(JSON.stringify(question));
 				var query="INSERT INTO questions (remote_id, version, questiongroup_id, sequence_id, type, 	mandatory, text, min, max, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 				$cordovaSQLite.execute(db, query, [question.id, question.version, questiongroup_id, question.seq_id, question.type, question.mandatory === true ? 1 : 0, question.text, question.min === false ? 'NO' : question.min, question.max === false ? 'NO' : question.max, question.step === false ? 'NO' : question.step]).then(function (res) {
 					if (question.type === 'SINGLECHOICE' || question.type === 'MULTICHOICE') {
@@ -427,8 +428,90 @@ angular.module('tabete.services', ['ngCordova'])
         	});
         }
 
-        var _prepareQuestiongroup = function(questiongroupId) {
+        this.getQuestiongroup = function(questiongroupId) {
+        	var query = "SELECT name, randomorder FROM questiongroups WHERE id = ?";
+        	return $cordovaSQLite.execute(db, query, [questiongroupId]).then(function (res) {
+        		questiongroupData = {
+        			id: 			questiongroupId,
+        			name: 			res.rows.item(0).name,
+        			randomorder: 	res.rows.item(0).randomorder === 1 ? true : false
+        		}
+        	return questiongroupData;
+        	});
+        }
 
+        this.getQuestionsByQuestiongroupId = function(questiongroupId) {
+			console.log("QuestionGroup ID is " + questiongroupId);
+        	
+        	function compare(a,b) {
+  				if (a.sequence_id < b.sequence_id)
+     				return -1;
+  				if (a.sequence_id > b.sequence_id)
+    				return 1;
+  				return 0;
+			}
+
+			var questions = [];
+        	var query = "SELECT id, remote_id, sequence_id, type, text, mandatory, min, max, step FROM questions WHERE questiongroup_id = ?";
+        	return $cordovaSQLite.execute(db, query, [questiongroupId]).then(function (res) {
+        		
+
+        		for (var i = 0; i < res.rows.length; i++) {
+					console.log(JSON.stringify(res.rows.item(i)))        			
+        			question = {};
+        			question.id = 			res.rows.item(i).id;
+        			question.remote_id = 	res.rows.item(i).remote_id;
+        			question.sequence_id = 	res.rows.item(i).sequence_id;
+        			question.text = 			res.rows.item(i).text;
+        			question.type =			res.rows.item(i).type;
+        			question.mandatory = 	res.rows.item(i).mandatory === 1 ? true : false;
+        			if (res.rows.item(i).min !== 'NO') {
+        				question.min = 	res.rows.item(i).min;
+        			}
+        			if (res.rows.item(i).max !== 'NO') {
+        				question.max =	res.rows.item(i).max;
+        			}
+        			if (res.rows.item(i).step !== 'NO') {
+        				question.step = 	res.rows.item(i).step;
+        			}
+
+        			questions.push(question);
+        		}
+        		
+        		return questions;
+        	}, function (err) {
+        		console.error(err);
+        	}).then(function (questions) {
+        		
+        		angular.forEach(questions , function(question) {
+		        	
+		        	if (question.type === 'SINGLECHOICE' || question.type === 'MULTICHOICE') {
+		        		var query = "SELECT id, code, description, value FROM questionoptions WHERE question_id = ?";
+		        		question.questionoptions = [];
+
+		        		$cordovaSQLite.execute(db, query, [question.id]).then(function (res3) {
+		        			for (var j = 0; j < res3.rows.length; j++) {
+		        				question.questionoptions.push({
+		        					code: 			res3.rows.item(j).code,
+		        					description: 	res3.rows.item(j).description,
+		        					value: 			res3.rows.item(j).value,  
+		        				})
+		        			}
+
+		        		}, function (err) { 
+		        			console.error(err);
+		        		});
+		        	}
+			    })
+
+			    return questions;
+        	}).then(function(questions) {
+			   		console.log(questions);
+			        return questions;
+			    
+        	}, function (err) {
+        		console.error(err);
+        	})
         }
 
         var _initAnswerObject = function(substudyId) {
@@ -465,7 +548,6 @@ angular.module('tabete.services', ['ngCordova'])
         	var answerData = _initAnswerObject(substudyId);
 
         	return _getQuestionGroupsBySubstudyId(substudyId).then( function (res) {
-        		console.log(res[0]);
         		return res[0];
         	}, function (err) {
         		console.error(err);
@@ -473,13 +555,12 @@ angular.module('tabete.services', ['ngCordova'])
         }
 
         this.getNextQuestiongroup = function (questiongroupId) {
+        	_getSubstudyIdByQuestiongroupId(questiongroupId).then(function (qgroups) {
 
+        	})
         }
 
-        this.getQuestiongroupData = function (questiongroupId) {
-
-        }
-
+        
         this.saveAnswers = function (jsonAnswerData) {
 
         }
