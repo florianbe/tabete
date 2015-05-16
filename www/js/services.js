@@ -1,21 +1,21 @@
 angular.module('tabete.services', ['ngCordova'])
 	.factory('devTest', function($ionicPlatform, $http, $cordovaSQLite, $q, dataLayer) {
 		var self = this;
-		var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
-    	// var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
+		// var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
+    	var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
     	// var url = "http://tabea.dev:8080/api/v1/study/getid?study=te_stu&password=geheim";
 
-	    // studyData = {
-	    // 	studyServer: 	'http://tabea.dev:8080',
-	    // 	studyName: 		'te_stu',
-	    // 	studyPassword: 	'geheim'
-	    // };
-
 	    studyData = {
-	    	studyServer: 	'http://anthill-inside.net/tabea_test',
-	    	studyName: 		'zeitver2015',
-	    	studyPassword: 	'zeitver2015'	
-	    }
+	    	studyServer: 	'http://tabea.dev:8080',
+	    	studyName: 		'te_stu',
+	    	studyPassword: 	'geheim'
+	    };
+
+	    // studyData = {
+	    // 	studyServer: 	'http://anthill-inside.net/tabea_test',
+	    // 	studyName: 		'zeitver2015',
+	    // 	studyPassword: 	'zeitver2015'	
+	    // }
 
 	    jsonStudyData = {};
 
@@ -46,7 +46,7 @@ angular.module('tabete.services', ['ngCordova'])
 		    //QUESTION GROUPS
 		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questiongroups (id integer primary key, version integer, substudy_id integer, name text, sequence_id integer, randomorder integer)");
 		    //RULES
-		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS rules (id integer primary key, questiongroup_id integer, question_remote_id integer, answer_value text)");
+		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS rules (id integer primary key, questiongroup_id integer, question_id integer, answer_value text)");
 		    //QUESTIONS
 		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questions (id integer primary key, remote_id integer, version integer, questiongroup_id integer, sequence_id integer, type text, mandatory integer, text text, min text, max text, step text)");
 		    //QUESTIONS OPTIONS
@@ -256,8 +256,11 @@ angular.module('tabete.services', ['ngCordova'])
 		// Insert Rules to Database
 		var _insertRules = function (questiongroup_id, rules) {
 			angular.forEach(rules, function (rule) {
-				var query="INSERT INTO rules (questiongroup_id, question_remote_id, answer_value) VALUES (?, ?, ?)";
-				$cordovaSQLite.execute(db, query, [questiongroup_id, rule.question_id, rule.answer_value]).then(function (res) {
+				var query="SELECT q.id FROM questions q INNER JOIN questiongroups qg ON q.questiongroup_id = qg.id WHERE q.remote_id = ? AND qg.substudy_id IN (SELECT substudy_id FROM questiongroups WHERE id = ?)";
+				$cordovaSQLite.execute(db, query, [rule.question_id, questiongroup_id]).then(function (res) {
+					qId = res.rows.item(0).id;
+					var query="INSERT INTO rules (questiongroup_id, question_id, answer_value) VALUES (?, ?, ?)";	
+					$cordovaSQLite.execute(db, query, [questiongroup_id, qId, rule.answer_value]);
 				}, function (err) {
 					console.error(err);
 				})
@@ -267,7 +270,6 @@ angular.module('tabete.services', ['ngCordova'])
 		// Insert Questions to Database
 		var _insertQuestions = function (questiongroup_id, questions) {
 			angular.forEach(questions, function (question) {
-				console.log(JSON.stringify(question));
 				var query="INSERT INTO questions (remote_id, version, questiongroup_id, sequence_id, type, 	mandatory, text, min, max, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 				$cordovaSQLite.execute(db, query, [question.id, question.version, questiongroup_id, question.seq_id, question.type, question.mandatory === true ? 1 : 0, question.text, question.min === false ? 'NO' : question.min, question.max === false ? 'NO' : question.max, question.step === false ? 'NO' : question.step]).then(function (res) {
 					if (question.type === 'SINGLECHOICE' || question.type === 'MULTICHOICE') {
@@ -371,12 +373,10 @@ angular.module('tabete.services', ['ngCordova'])
         }
 
         var _getSubstudyIdByQuestiongroupId = function(questiongroupId) {
-        	var query = "SELECT substudy_id FROM questiongroups WHERE qg.id = ?";
+        	var query = "SELECT substudy_id FROM questiongroups WHERE id = ?";
         	return $cordovaSQLite.execute(db, query, [questiongroupId]).then(function(res) {
         		var substudyId = null;
-
-        		substudyId = res.rows.item(0).ss_id;
-        		        		
+        		substudyId = res.rows.item(0).substudy_id;
         		return substudyId;
         	}, function (err) {
         		console.error(err);
@@ -456,15 +456,15 @@ angular.module('tabete.services', ['ngCordova'])
         	return $cordovaSQLite.execute(db, query, [questiongroupId]).then(function (res) {
         		
 
-        		for (var i = 0; i < res.rows.length; i++) {
-					console.log(JSON.stringify(res.rows.item(i)))        			
+        		for (var i = 0; i < res.rows.length; i++) {	
         			question = {};
         			question.id = 			res.rows.item(i).id;
         			question.remote_id = 	res.rows.item(i).remote_id;
         			question.sequence_id = 	res.rows.item(i).sequence_id;
-        			question.text = 			res.rows.item(i).text;
+        			question.text = 		res.rows.item(i).text;
         			question.type =			res.rows.item(i).type;
         			question.mandatory = 	res.rows.item(i).mandatory === 1 ? true : false;
+        			question.answer = 		null;
         			if (res.rows.item(i).min !== 'NO') {
         				question.min = 	res.rows.item(i).min;
         			}
@@ -506,7 +506,6 @@ angular.module('tabete.services', ['ngCordova'])
 
 			    return questions;
         	}).then(function(questions) {
-			   		console.log(questions);
 			        return questions;
 			    
         	}, function (err) {
@@ -522,7 +521,7 @@ angular.module('tabete.services', ['ngCordova'])
         	substudy_answers.answers = [];
         	//Overwrite the variable in localstorage just in case
         	$localstorage.setObject('answers_' + substudyId);
-        	console.log('Answer object prepared');
+
         	return substudy_answers;
         }
 
@@ -555,8 +554,14 @@ angular.module('tabete.services', ['ngCordova'])
         }
 
         this.getNextQuestiongroup = function (questiongroupId) {
-        	_getSubstudyIdByQuestiongroupId(questiongroupId).then(function (qgroups) {
-
+       	_getSubstudyIdByQuestiongroupId(questiongroupId).then(function (sustuId) {
+        		console.log('In getNext of sustu: ' + sustuId);
+        		return sustuId;
+        	}).then(function (sustuId) {
+        		_getQuestionGroupsBySubstudyId(sustuId).then(function (qgroups) {
+        			console.log('The quesitongorups are:');
+        			console.log(qgroups);
+        		})
         	})
         }
 

@@ -136,10 +136,10 @@ angular.module('tabete.controllers', [])
     
     dataLayer.startSubstudy(substudyId).then(function (res) {
     dataLayer.getQuestiongroup(res.id).then(function (res2) {
-      console.log("QG ID:");
-      console.log(res);
-      console.log("QG Data:");
-      console.log(res2);
+      // console.log("QG ID:");
+      // console.log(res);
+      // console.log("QG Data:");
+      // console.log(res2);
       return res2.id;
       }).then(function (qgId) {
         dataLayer.getQuestionsByQuestiongroupId(qgId).then(function (questions) {
@@ -148,7 +148,7 @@ angular.module('tabete.controllers', [])
       })
       })
       
-  
+    dataLayer.getNextQuestiongroup(2);
 
     
 
