@@ -1,21 +1,21 @@
 angular.module('tabete.services', ['ngCordova'])
 	.factory('devTest', function($ionicPlatform, $http, $cordovaSQLite, $q, dataLayer) {
 		var self = this;
-		var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
-    	// var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
+		// var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
+    	var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
     	// var url = "http://tabea.dev:8080/api/v1/study/getid?study=te_stu&password=geheim";
 
-	    // studyData = {
-	    // 	studyServer: 	'http://tabea.dev:8080',
-	    // 	studyName: 		'te_stu',
-	    // 	studyPassword: 	'geheim'
-	    // };
-
 	    studyData = {
-	    	studyServer: 	'http://anthill-inside.net/tabea_test',
-	    	studyName: 		'zeitver2015',
-	    	studyPassword: 	'zeitver2015'	
-	    }
+	    	studyServer: 	'http://tabea.dev:8080',
+	    	studyName: 		'te_stu',
+	    	studyPassword: 	'geheim'
+	    };
+
+	    // studyData = {
+	    // 	studyServer: 	'http://anthill-inside.net/tabea_test',
+	    // 	studyName: 		'zeitver2015',
+	    // 	studyPassword: 	'zeitver2015'	
+	    // }
 
 	    jsonStudyData = {};
 
@@ -90,7 +90,7 @@ angular.module('tabete.services', ['ngCordova'])
 		return self;
 	})
 
-	.factory('dataLayer', function($http, $cordovaSQLite, $q) {
+	.factory('dataLayer', function($http, $cordovaSQLite, $q, $localstorage) {
 		var self = this;
 
 		var _studyAnswers = {};
@@ -313,7 +313,6 @@ angular.module('tabete.services', ['ngCordova'])
 			return defer;
 		};
 
-
 		//Get all studies with substudies
 		this.getStudiesWithSubstudies = function() {
 			var query = "SELECT s.id AS s_id, s.name AS s_name, s.description AS s_description, s.state AS state, s.start_date AS start_date, s.end_date AS end_date, s.finalupload_date AS finalupload_date, ss.id AS ss_id, ss.title AS ss_title, ss.triggertype AS triggertype, ss.description AS ss_description FROM studies s INNER JOIN substudies ss ON s.id = ss.study_id ORDER BY s.id, ss.id";
@@ -342,7 +341,6 @@ angular.module('tabete.services', ['ngCordova'])
         	});
         }
 
-
 		//Get info for substudy defined by given id
 		this.getSubstudyInfo = function (substudyId) {
 			var query = "SELECT s.id AS s_id, s.name AS s_name, s.description AS s_description, s.state AS state, s.start_date AS start_date, s.end_date AS end_date, s.finalupload_date AS finalupload_date, ss.id AS ss_id, ss.title AS ss_title, ss.triggertype AS triggertype, ss.description AS ss_description, ser.subject_name as subject_name FROM substudies ss INNER JOIN studies s ON s.id = ss.study_id INNER JOIN servers ser ON s.server_id = ser.id WHERE ss.id = ?";
@@ -370,6 +368,127 @@ angular.module('tabete.services', ['ngCordova'])
             	console.error(err);
         	});
         }
+
+        var _getSubstudyIdByQuestiongroupId = function(questiongroupId) {
+        	var query = "SELECT substudy_id FROM questiongroups WHERE qg.id = ?";
+        	return $cordovaSQLite.execute(db, query, [questiongroupId]).then(function(res) {
+        		var substudyId = null;
+
+        		substudyId = res.rows.item(0).ss_id;
+        		        		
+        		return substudyId;
+        	}, function (err) {
+        		console.error(err);
+        	});
+        }
+
+        var _getQuestionGroupsBySubstudyId = function(substudyId) {
+        	var query = "SELECT id, sequence_id, randomorder FROM questiongroups WHERE substudy_id = ? ORDER BY sequence_id";
+        	
+        	function compare(a,b) {
+  				if (a.sequence_id < b.sequence_id)
+     				return -1;
+  				if (a.sequence_id > b.sequence_id)
+    				return 1;
+  				return 0;
+			}
+
+        	return $cordovaSQLite.execute(db, query, [substudyId]).then(function(res) {
+        		questiongroups = [];
+        		for (var i = 0; i < res.rows.length; i++) {
+        			questiongroups.push({
+        				id: 			res.rows.item(i).id,
+        				sequence_id: 	res.rows.item(i).sequence_id,
+        				randomorder: 	res.rows.item(i).randomorder === 1 ? true : false
+        			})        			
+        		};
+        		questiongroups.sort(compare);
+
+        		return questiongroups;
+        	}, function (err) {
+        		console.error(err);
+        	});
+        }
+
+        var _getRulesByQuestiongroupId = function (questiongroupId) {
+        	var query = "SELECT * FROM rules WHERE questiongroup_id = ?";
+        	return $cordovaSQLite.execute(db, query, [substudyId]).then(function(res) {
+        		rules = [];
+        		for (var i = 0; i < res.rows.length; i++) {
+        			rules.push({
+        				id: 				res.rows.item(i).id,
+        				question_remote_id: res.rows.item(i).questiong_remote_id,
+        				answer_value: 		res.rows.item(i).answer_value
+        			})        			
+        		};
+        		return rules;
+        	}, function (err) {
+        		console.error(err);
+        	});
+        }
+
+        var _prepareQuestiongroup = function(questiongroupId) {
+
+        }
+
+        var _initAnswerObject = function(substudyId) {
+        	//Overwrite the variable in localstorage just in case
+        	var substudy_answers = {};
+        	substudy_answers.id = substudyId;
+        	substudy_signaltime = Date.now();
+        	substudy_answers.answers = [];
+        	//Overwrite the variable in localstorage just in case
+        	$localstorage.setObject('answers_' + substudyId);
+        	console.log('Answer object prepared');
+        	return substudy_answers;
+        }
+
+        var _getAnswerObject = function(substudyId) {
+        	//Initialize answer object - get from localstorage, create new if none exist.
+			var substudy_answers = $localstorage.getObject('answers_' + substudyId);
+
+			  if (!substudy_answers.hasOwnProperty('substudyId'))
+			  {
+			  	substudy_answers = _initAnswerObject(substudyId);
+			  }
+
+			return substudy_answers;
+        }
+
+        var _setAnswerObject = function(answerObject, substudyId) {
+        	$localstorage.setObject('answers_' + substudyId);
+        }
+
+
+        this.startSubstudy = function (substudyId) {
+        	//Generate new answer object
+        	var answerData = _initAnswerObject(substudyId);
+
+        	return _getQuestionGroupsBySubstudyId(substudyId).then( function (res) {
+        		console.log(res[0]);
+        		return res[0];
+        	}, function (err) {
+        		console.error(err);
+        	})
+        }
+
+        this.getNextQuestiongroup = function (questiongroupId) {
+
+        }
+
+        this.getQuestiongroupData = function (questiongroupId) {
+
+        }
+
+        this.saveAnswers = function (jsonAnswerData) {
+
+        }
+
+        this.finishSubstudy = function (questiongroupId) {
+
+        }
+
+
 
         //Delete study with given id
         //DELETE a complete study by studyId

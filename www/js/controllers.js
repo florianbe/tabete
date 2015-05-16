@@ -68,7 +68,7 @@ angular.module('tabete.controllers', [])
   };
 })
 
-.controller('StudiesCtrl', function($scope, $state, $ionicPlatform, $ionicModal, $ionicPopup, $cordovaBarcodeScanner, $http, dataLayer, devTest) {
+.controller('StudiesCtrl', function($scope, $state, $ionicPlatform, $ionicModal, $ionicPopup, $localstorage, $cordovaBarcodeScanner, $http, dataLayer, devTest) {
 // DEVTEST Data
   $scope.t_studies = [
     { title: 'Zeitverwendung im Studienalltag', id: 1 },
@@ -81,7 +81,7 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.testHttp = function() {
-    // devTest.testHttp();
+    devTest.testHttp();
 
   }
 
@@ -90,13 +90,15 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.testDatabaseAccess = function() {
-    devTest.testDataBase();
+    //devTest.testDataBase();
   }
 
   $scope.substudies = [];
   $scope.substudies = null;
+  $scope.hasSubstudies = false;
+  
 
-  $scope.hasSubstudies = function() {
+  $scope.checkForSubstudies = function() {
     if ($scope.substudies !== undefined && $scope.substudies !== null && $scope.substudies.length > 0) {
       return true;
     }
@@ -110,7 +112,7 @@ angular.module('tabete.controllers', [])
       { dataLayer.getStudiesWithSubstudies().then(function (res) {
         console.log(res);
         $scope.substudies = res;
-
+        $scope.hasSubstudies = $scope.checkForSubstudies();
       })
     })
   };
@@ -118,17 +120,20 @@ angular.module('tabete.controllers', [])
   $scope.showSubstudyInfo = function(substudyId) {
     
     dataLayer.getSubstudyInfo(substudyId).then(function (res) {
-      var alertPopup = $ionicPopup.alert({
+      var substudyPopup = $ionicPopup.alert({
         title: 'Studieninformationen',
         template: '<p><strong>Ihre ID:</strong> ' + res.subject_id + '</p>'+ '<p><strong>Beschreibung für ' + res.study_name + ':</strong> ' + res.study_description + '</p><p>' + res.substudy_description + '</p>'
       });
-      alertPopup;
+      substudyPopup;
     })
   };
 
   $scope.loadSubstudy = function(substudyId) {
-    $state.go('app.questiongroup', {'questiongroupId': substudyId});
-    
+    dataLayer.startSubstudy(substudyId).then(function (res) {
+      $state.go('app.questiongroup', {'questiongroupId': substudyId});
+    }, function (err) {
+      console.error(err);
+    });
   }
 
   $scope.updateStudies();
@@ -143,7 +148,7 @@ angular.module('tabete.controllers', [])
             }, 100);
   //Disable Side Menu
   $scope.allowSideMenu = false;
-    
+
 
 })  
 
