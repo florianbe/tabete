@@ -134,21 +134,28 @@ angular.module('tabete.controllers', [])
   $scope.loadSubstudy = function(substudyId) {
     var substudyData = {};
     
-    dataLayer.startSubstudy(substudyId).then(function (res) {
-    dataLayer.getQuestiongroup(res.id).then(function (res2) {
-      // console.log("QG ID:");
-      // console.log(res);
-      // console.log("QG Data:");
-      // console.log(res2);
-      return res2.id;
-      }).then(function (qgId) {
-        dataLayer.getQuestionsByQuestiongroupId(qgId).then(function (questions) {
-          console.log(questions);
-        });
-      })
-      })
-      
-    dataLayer.getNextQuestiongroup(2);
+    // dataLayer.startSubstudy(substudyId).then(function (res) {
+    // dataLayer.getQuestiongroup(res.id).then(function (res2) {
+    //   // console.log("QG ID:");
+    //   // console.log(res);
+    //   // console.log("QG Data:");
+    //   // console.log(res2);
+    //   return res2.id;
+    //   }).then(function (qgId) {
+    //     dataLayer.getQuestionsByQuestiongroupId(qgId).then(function (questions) {
+    //       console.log(questions);
+    //     });
+    //   })
+    //   })
+    
+
+
+    dataLayer.getNextQuestiongroup(1).then(function (res) {
+      console.log('Next Questiongroup for 1: ' + res);  
+    });
+    dataLayer.getNextQuestiongroup(2).then(function (res) {
+      console.log('Next Questiongroup for 2: ' + res);  
+    });
 
     
 
