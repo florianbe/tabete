@@ -629,20 +629,59 @@ angular.module('tabete.services', ['ngCordova'])
         		return _getRulesBySubstudyId(dataset_qg);
         	}).then(function (dataset_qg) {
         		var nextQuestiongroupId = -1;
-        		var answers = _getAnswerObject(dataset_qg.substudy_id);
-        		console.log(answers);
-        		dataset_qg.questiongroups.forEach(function (question){
-        			console.log(question);
-        			if (question.rules) {
-        				question.rules.forEach(function (rule) {
-        				console.log(rule);
-        				})
-        			}		
-        		})
+        		var answerObject = _getAnswerObject(dataset_qg.substudy_id);
+
+        		console.log(answerObject);
+        		console.log(dataset_qg.questiongroups);
+        		console.log("QG ID " + questiongroupId);
+
+        		var nextQgIndex = dataset_qg.questiongroups.map(function (e) { return e.id}).indexOf(questiongroupId) + 1;
+        		
+        		console.log("QG Index " + nextQgIndex);
+        		
+        		for (var i = nextQgIndex; i < dataset_qg.questiongroups.length; i++) {
+        			console.log("In Index " + i);
+        			console.log(dataset_qg.questiongroups[i]);
+
+        			if (dataset_qg.questiongroups[i].rules.length > 0) {
+        				var ruleIsMet = false;
+        				var daRule = dataset_qg.questiongroups[i].rules;
+        				for (var j = 0; j < daRule.length; j++) {
+        					var answerIndex = answerObject.answers.map(function(e) { return e.question_id }).indexOf(daRule[j].question_id);
+
+        					if (answerIndex !== -1) {
+        						//Check if string contains ';' --> multichoice answer - to be split in array
+        						if (answerObject.answers[answerIndex].answer.indexOf(';') !== -1) {
+        							if (answerObject.answers[answerIndex].answer.indexOf(daRule[j].answer_value) !== -1) {
+        								ruleIsMet = true;
+        								nextQuestiongroupId = dataset_qg.questiongroups[i].id;
+        								break;
+        							}
+        						}
+        						else {
+        							//Else just compare
+        							if (answerObject.answers[answerIndex].answer == daRule[j].answer_value) {
+        								ruleIsMet = true;
+        								nextQuestiongroupId = dataset_qg.questiongroups[i].id;
+        								break;
+        							}
+        						}
+        					}
+        				}
+        				if (ruleIsMet) {
+        					nextQuestiongroupId = dataset_qg.questiongroups[i].id;
+        					break
+        				}
+        			}
+        			else {
+        				nextQuestiongroupId = dataset_qg.questiongroups[i].id;
+        				break;
+        			}
+        		};
 
         		return nextQuestiongroupId;
-        	}).then(function (res) {
-        		return -1;
+        	}, function (err) {
+        		console.error(err);
         	})
         }
         		
