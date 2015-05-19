@@ -605,7 +605,7 @@ angular.module('tabete.services', ['ngCordova'])
         	//Generate new answer object
         	var answerData = _initAnswerObject(substudyId);
         	return _getQuestionGroupsBySubstudyId(substudyId).then( function (res) {
-        		return res[0];
+        		return res[0].id;
         	}, function (err) {
         		console.error(err);
         	})
@@ -615,9 +615,7 @@ angular.module('tabete.services', ['ngCordova'])
         	
         	var substudyId = null;
         	var qGroups = [];
-        	var rules = [];
-
-        	
+        	var rules = [];       	
 
 			return _getSubstudyIdByQuestiongroupId(questiongroupId).then(function (sustuId) {
         		dataset = {};
@@ -684,199 +682,23 @@ angular.module('tabete.services', ['ngCordova'])
         		console.error(err);
         	})
         }
-        		
+     		
         
-
-			// return (qGroups.map(function (e) { return e.id}).indexOf(questiongroupId) + 1);
-
-
-   //      	.then(function (nextQgIndex) {
-   //      		var nextQgId = -1;
-
-   //      		for (var i = nextQgIndex; i < qGroups.length; i++) {
-   //      			if(_isGroupValid(qGroups[nextQgIndex])) {
-   //      				console.log("index " + nextQgIndex);
-   //      				console.log("Value of qg_valid:" + _isGroupValid(qGroups[nextQgIndex]));
-   //      				nextQgId = qGroups[nextQgIndex].id;
-   //      				break;
-   //      			}
-   //      		};
-
-   //      		return nextQgId;
-   //      	}, function (err) {
-   //      		console.error(err);
-   //      	})
-        		
+        this.saveAnswers = function (jsonAnswerData, substudyId, inTestMode) {
+        	var query = "INSERT INTO answers (question_id, answer, testanswer, answer_date, signal_date) VALUES (?, ?, ?, ?, ?)";
+        	//Get answer object for signal_date
 
 
-
-        	// 	var nextOneFound = false;
-        	// 	var answerObject = _getAnswerObject(substudyId);
-        	// 	for (var i = nextQgIndex; i < qGroups.length; i++) {
-	        // 			var questiongroup = qGroups[i];		
-        	// 			promises.push(
-        	// 				_getRulesByQuestiongroupId(questiongroup.id).then(function (rules) {
-        	// 					console.log(questiongroup);
-        	// 					if (questiongroup.rules.length = 0) {
-
-        	// 					} 
-        	// 					else {
-									// validGroups.push({questiongroup_id: questiongroup.id, is_valid: true}); 
-									// console.log(validGroups);       	
-        	// 					}
-
-        	// 				})
-    	
-
-    					
-
-
-// ///////////////
-// 	        			promises.push(
-// 						_getRulesByQuestiongroupId(qGroups[i].id).then(function (rules){
-// 			        		var questiongroup = qGroups[i];
-// 			        		questiongroup.rules = rules;
-// 			        		return questiongroup;
-// 			        	}).then(function (questiongroup) {
-// 			        		if (questiongroup.rules.length >= 0) {
-// 			        			nextOne = questiongroup.id;
-// 			        			console.log('in loop' + questiongroup.id);
-// 			        		} 
-// 			        		else {
-// 			        			var answerObject = _getAnswerObject(substudyId);
-// 			        			angular.forEach(questiongroup.rules, function (rule) {
-
-// 			        			})
-// 			        		}
-// 			        	}, function (err) {
-// 			        		console.error(err);
-// 			        	})
-// 			        	)
-// 	        		}
-			        
-// 			    }, function (err) {
-// 			    	console.error(err);
-// 			    })
-// 		    )
-//////////////
-
-
-
-
-        var _determineNextQuestionGroup = function (substudyId, qGroup) {
-        	return _getRulesByQuestiongroupId(qGroup.id).then(function (rules){
-        		qGroup.rules = rules;
-        		return qGroup;
-        	}).then(function (questiongroup) {
-        		var nextOneValid = true;
-        		if (questiongroup.rules.length > 0) {
-        			var answerObject = _getAnswerObject(substudyId);
-        			nextOneValid = false;
-
-        			angular.forEach(questiongroup.rules, function (rule) {
-        				var answerIndex = answerObject.answers.map(function(e) { return e.question_id }).indexOf(rule.question_id);
-        				if (answerIndex != -1) {
-
-        				}
-        			})
-        		}	
-
-        		return nextOneValid;
-        	}, function (err) {
-        		console.error(err);
-			}).then(function (nextOneValid) {
-				if (nextOneValid) {
-					return qGroup.id;
-				}
-				else{
-					return this.getNextQuestiongroup(qGroup.id);
-				}
-			})
-        }
-
-        this.getNextQuestiongroup2 = function (questiongroupId) {
-       		return _getSubstudyIdByQuestiongroupId(questiongroupId).then(function (sustuId) {
-        		return sustuId;
-        		}).then(function (sustuId) {
-        			return _getQuestionGroupsBySubstudyId(sustuId).then(function (qgroups) {
-	        			//Get current index
-
-	        			var qgIndex = qgroups.map(function (e) { return e.id}).indexOf(questiongroupId);
-	        			var qgNextIndex = qgIndex + 1;
-	        			var ruleRequirementMet = false;
-	        			var answerObject= _getAnswerObject(sustuId);
-	        			//Check if last question group
-	        			if (qgIndex + 1 === qgroups.length) {
-	        				return -1;
-	        			}
-	        			else {
-	        				return _getRulesByQuestiongroupId(qgroups[qgNextIndex].id).then(function (qrules) {
-	        					qgroups[qgNextIndex].rules = qrules;
-	        					console.log(qgroups[qgNextIndex].rules);
-	        					if (qgroups[qgNextIndex].rules.length > 0) {
-
-									angular.forEach(qgroups[qgNextIndex].rules, function (rule) {
-		        						_getAnswerByQuestionAndSignalTime(rule.question_id, answerObject.signaltime).then (function (r_answer) {
-		        							if(r_answer !== null) {
-		        								if (r_answer.type !== 'MULTICHOICE') {
-		        									if (r_answer.answer === rule.answer_value) {
-		        										ruleRequirementMet = true;
-		        									}
-		        								}
-		        								else {
-		        									var r_answers = r_answer.answer.split(';');
-		        									if (r_answers !== '') {
-		        										if (r_answers.indexOf(rule.answer_value) !== -1) {
-		        											ruleRequirementMet = true;
-		        										}
-		        									}
-		        								}
-		        							}
-		        						}, function (err) {
-		        							console.error(err);
-		        						})
-		        					})
-		        					if (ruleRequirementMet){
-		        						return qgroups[qgNextIndex].id;
-		        					}
-		        					else {
-		        						console.log("TYPE");
-		        						console.log(typeof this.getNextQuestiongroup);
-		        						console.log("TYPE");
-		        						return this.getNextQuestiongroup(qgroups[qgNextIndex].id).then( function (nextQg) {
-		        							console.log("in nesxt QG");
-		        							return nextQg;
-		        						}, function (err) {
-		        							console.error(err);
-		        						});
-		        					}
-	        						
-	        					}
-	        					else {
-	        						return qgroups[qgNextIndex].id;
-	        					}
-	        				})
-        				}
-	    			}, function (err) {
-    					console.error(err);
-    				})
-			}, function (err) {
-				console.error(err);
-			})
-		}			
-		        				
-		        					
-		        					
-
-
-        
-        this.saveAnswers = function (jsonAnswerData) {
+        	//Iterate over answer data
+        	$cordovaSQLite.execute(db, query, [studyId]);
 
         }
 
         this.finishSubstudy = function (questiongroupId) {
-
-        }
+			_getSubstudyIdByQuestiongroupId(questiongroupId).then(function (sustuId) {
+        		_setAnswerObject(null, sustuId);
+        	});
+		}
 
 
 

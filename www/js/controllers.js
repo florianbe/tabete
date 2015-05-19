@@ -99,8 +99,9 @@ angular.module('tabete.controllers', [])
   $scope.substudies = null;
   $scope.hasSubstudies = false;
   $scope.allowSideMenu = true;
+  $scope.newStudyInput = {};
 
-
+  //Set view mode: list of substudies or info none
   $scope.checkForSubstudies = function() {
     if ($scope.substudies !== undefined && $scope.substudies !== null && $scope.substudies.length > 0) {
       return true;
@@ -110,6 +111,7 @@ angular.module('tabete.controllers', [])
     }
   }
 
+  //Updata study list
   $scope.updateStudies = function () {
     $ionicPlatform.ready(function() 
       { dataLayer.getStudiesWithSubstudies().then(function (res) {
@@ -120,6 +122,7 @@ angular.module('tabete.controllers', [])
     })
   };
 
+  //Info popup: substudies
   $scope.showSubstudyInfo = function(substudyId) {
     
     dataLayer.getSubstudyInfo(substudyId).then(function (res) {
@@ -130,6 +133,28 @@ angular.module('tabete.controllers', [])
       substudyPopup;
     })
   };
+
+  
+  // Create Modal for adding new studies
+  $ionicModal.fromTemplateUrl('templates/addstudy.html', {
+    scope: $scope
+  }).then(function(modal) {
+    $scope.modalNewStudy = modal;
+  });
+
+  $scope.showNewStudy = function() {
+    $scope.modalNewStudy.show();
+  };
+
+  $scope.closeNewStudy = function() {
+    
+    $scope.newStudyInput = {};
+    $scope.modalNewStudy.hide();
+  };
+
+  //Add new study via QR-Code
+
+  //Add new study
 
   $scope.loadSubstudy = function(substudyId) {
     var substudyData = {};
