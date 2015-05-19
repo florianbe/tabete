@@ -38,7 +38,7 @@ angular.module('tabete.services', ['ngCordova'])
 		    //SERVERS
 		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS servers (id integer primary key, url text, subject_id integer, subject_name text)");
 		    //STUDIES
-		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS studies (id integer primary key, version integer, server_id integer, remote_id integer, name text, description text, state text, start_date text, end_date text, finalupload_date text)");
+		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS studies (id integer primary key, version integer, server_id integer, remote_id integer, name text, description text, password text, state text, start_date text, end_date text, finalupload_date text)");
 		    //SUBSTUDIES
 		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS substudies (id integer primary key, version integer, study_id integer, title text, triggertype text, description text)");
 		    //SIGNAL POINTS
@@ -117,40 +117,54 @@ angular.module('tabete.services', ['ngCordova'])
 			}
 		};
 
-		//Tries to retrieve a Subject id based on the server
-		var _retrieveServerId = function() {
-			var query = "SELECT id FROM servers WHERE url = ?";
+		var _generateStudyData = function() {
+
+		}
+
+		var _compareStudyVersion = function(studyId) {
 			
-			return $cordovaSQLite.execute(db, query, [_studyData.studyServer]).then(function(res) {
+			var comparator = {
+				study_id: 	studyId
+			};
+
+			var url = "SELECT "
+		};
+
+		//Tries to retrieve a Subject id based on the server
+		var _retrieveServerId = function(insertData) {
+			var query = "SELECT id FROM servers WHERE url = ?";
+			return $cordovaSQLite.execute(db, query, [insertData.studyData.studyServer]).then(function(res) {
 				if(res.rows.length > 0) {
-	        		return res.rows.item(0).id;
+					insertData.server_id = res.rows.item(0).id;        		
 	            }
 	            else {
-	            	return false;
+	            	insertData.server_id = false;
 	            }
+	            return insertData;
 			}, function (err) {
 				console.error(err);
 			})
 		};
 
 		//Generates a new SubjectId serverside
-		var _generateSubjectId = function(studyData) {
-			var req_url = _getUrl(studyData, 'getSubjectId');
+		var _generateSubjectId = function(insertData) {
+			var req_url = _getUrl(insertData.studyData, 'getSubjectId');
 			//console.log(req_url);
 			return $http.get(req_url).then(function(data) {
-	      		return data.data.testsubject;  
+	      		insertData.testsubject = data.data.testsubject;  
+	      		return insertData;
 	  		}, function (err) {
 				console.error(err);
 			})
 		};
 		
 		//Stores a new SubjectId in database
-		var _storeSubjectId = function(testsubject) {
-			if(testsubject !== undefined) {
+		var _storeSubjectId = function(insertData) {
+			if(insertData.testsubject !== undefined) {
 				var query = "INSERT INTO servers (url, subject_id, subject_name) VALUES (?, ?, ?)";
-	            return $cordovaSQLite.execute(db, query, [_studyData.studyServer, testsubject.id, testsubject.name]).then(function(res) {
+	            return $cordovaSQLite.execute(db, query, [insertData.studyData.studyServer, insertData.testsubject.id, insertData.testsubject.name]).then(function(res) {
 	                //console.log("Rows affected: " + res.rowsAffected);
-	                return res.rowsAffected;
+	                return insertData;
 	            }, function (err) {
 	                console.error(err);
 	            });
@@ -158,21 +172,22 @@ angular.module('tabete.services', ['ngCordova'])
 		};
 
 		// Either retrieves or generates a SubjectId based on studyData
-		var _getServerId = function() {
-	    	_studyData = studyData;
-	    	return _retrieveServerId().then (function(id) {
-	    		if (!id) {
+		var _getServerId = function(insertData) {
+	    	
+	    	return _retrieveServerId(insertData).then (function(insertData2) {
+	    		if (!insertData2.server_id) {
 	    			console.log('Getting new subject_id');
-	    			return _generateSubjectId(_studyData).then(function(testsubject) {
-	    				return _storeSubjectId(testsubject).then(function(result) {
-	    					return _retrieveServerId();
+	    			return _generateSubjectId(insertData2).then(function(insertData3) {
+	    				return _storeSubjectId(insertData3).then(function(insertData4) {
+	    					return _retrieveServerId(insertData4);
 	    				})
 	    			}, function (err) {
 	    				console.error(err);
 	    			});
 				}
 	    		else {
-	    			return id;
+
+	    			return insertData2;
 	    		}
 	    	}, function (err) {
 	    		console.error(err);
@@ -180,35 +195,34 @@ angular.module('tabete.services', ['ngCordova'])
 		};
 
 		// Insert Study Data to Database 
-		var _insertStudyData = function(server_id) {
-			var query = "INSERT INTO studies (version, server_id, remote_id, name, description, state, start_date, end_date, finalupload_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-			return $cordovaSQLite.execute(db, query, [_jsd.version, server_id, _jsd.id, _jsd.title, _jsd.description, _jsd.state, _jsd.start_date, _jsd.end_date, _jsd.finalupload_date]).then(function (res) {
-				return server_id;
+		var _insertStudyData = function(insertData) {
+			var query = "INSERT INTO studies (version, server_id, remote_id, name, description, state, password, start_date, end_date, finalupload_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			return $cordovaSQLite.execute(db, query, [insertData.jsonStudyData.version, insertData.server_id, insertData.jsonStudyData.id, insertData.jsonStudyData.title, insertData.jsonStudyData.description, insertData.jsonStudyData.state, insertData.studyData.studyPassword, insertData.jsonStudyData.start_date, insertData.jsonStudyData.end_date, insertData.jsonStudyData.finalupload_date]).then(function (res) {
+				return insertData;
 			}, function(err) {
 				console.error(err);
-			}).then(function (server_id) {
+			}).then(function (insertData2) {
 				var query = "SELECT id FROM studies WHERE server_id = ? AND remote_id = ?";
-				return $cordovaSQLite.execute(db, query, [server_id, _jsd.id]).then(function (res) {
+				return $cordovaSQLite.execute(db, query, [insertData.server_id, insertData.jsonStudyData.id]).then(function (res) {
 					if(res.rows.length > 0) {
-	        		return res.rows.item(res.rows.length -1).id;
-	            }
-	            else {
-	            	return false;
-	            }}, function (err) {
+						insertData2.jsonStudyData.study_id = res.rows.item(res.rows.length -1).id
+	        		}
+	        		return insertData2;
+	            }, function (err) {
 	            	console.error(err);
 				})
 			})
 		};
 
 		// Insert Substudy Data to Database
-		var _insertSubStudyData = function(study_id) {
-			angular.forEach( _jsd.substudies, function(substudy) {
+		var _insertSubStudyData = function(insertData) {
+			angular.forEach( insertData.jsonStudyData.substudies, function(substudy) {
 				
 				var query = "INSERT INTO substudies (version, study_id, title, triggertype, description) VALUES (?, ?, ?, ?, ?)";
-            	return $cordovaSQLite.execute(db, query, [substudy.version, study_id, substudy.title, substudy.trigger, substudy.description])
+            	return $cordovaSQLite.execute(db, query, [substudy.version, insertData.jsonStudyData.study_id, substudy.title, substudy.trigger, substudy.description])
             	.then(function(res) {
                 	var query_select = "SELECT id FROM substudies WHERE study_id = ? AND title = ?";
-                	return $cordovaSQLite.execute(db, query_select, [study_id, substudy.title])
+                	return $cordovaSQLite.execute(db, query_select, [insertData.jsonStudyData.study_id, substudy.title])
                 	.then(function(res){
                 		sustu_id = res.rows.item(0).id;
                 		// insert signal points if study is signalbased
@@ -297,13 +311,16 @@ angular.module('tabete.services', ['ngCordova'])
 			var promises = [];
 			var substudies = [];
 
-			_studyData = studyData;
-			_jsd = jsonStudyData;
-			_getServerId().then(function(server_id) {
-				return _insertStudyData(server_id);
-			}).then(function(study_id) {
-				console.log('Study inserted: ' + study_id)
-				_insertSubStudyData(study_id);
+			insertData = {};
+			insertData.studyData = studyData;
+			insertData.jsonStudyData = jsonStudyData
+
+			
+			_getServerId(insertData).then(function(insertData2) {
+				return _insertStudyData(insertData2);
+			}).then(function(insertData3) {
+				console.log('Study inserted: ' + insertData3.jsonStudyData.study_id)
+				_insertSubStudyData(insertData3);
 			}, function(err) {
 				console.error(err);
 			}).catch(function(err) {
@@ -492,7 +509,7 @@ angular.module('tabete.services', ['ngCordova'])
 			}
 
 			var questions = [];
-        	var query = "SELECT id, remote_id, sequence_id, type, text, mandatory, min, max, step FROM questions WHERE questiongroup_id = ?";
+        	var query = "SELECT id, remote_id, sequence_id, type, text, mandatory, min, max, step FROM questions WHERE questiongroup_id = ? ORDER BY sequence_id";
         	return $cordovaSQLite.execute(db, query, [questiongroupId]).then(function (res) {
         		
 
@@ -603,9 +620,11 @@ angular.module('tabete.services', ['ngCordova'])
 
         this.startSubstudy = function (substudyId) {
         	//Generate new answer object
-        	var answerData = _initAnswerObject(substudyId);
-        	return _getQuestionGroupsBySubstudyId(substudyId).then( function (res) {
-        		return res[0].id;
+        	dataset = {substudy_id: substudyId};
+        	var answerData = _initAnswerObject(dataset.substudy_id);
+        	
+        	return _getQuestionGroupsBySubstudyId(dataset).then( function (res) {
+        		return res.questiongroups[0].id;
         	}, function (err) {
         		console.error(err);
         	})

@@ -31,7 +31,7 @@ angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', '
         //SERVERS
         $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS servers (id integer primary key, url text, subject_id integer, subject_name text)");
         //STUDIES
-        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS studies (id integer primary key, version integer, server_id integer, remote_id integer, name text, description text, state text, start_date text, end_date text, finalupload_date text)");
+        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS studies (id integer primary key, version integer, server_id integer, remote_id integer, name text, description text, password text, state text, start_date text, end_date text, finalupload_date text)");
         //SUBSTUDIES
         $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS substudies (id integer primary key, version integer, study_id integer, title text, triggertype text, description text)");
         //SIGNAL POINTS

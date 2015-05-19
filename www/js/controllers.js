@@ -153,6 +153,18 @@ angular.module('tabete.controllers', [])
   };
 
   //Add new study via QR-Code
+  $scope.scanNewStudy = function() {
+    $cordovaBarcodeScanner.scan().then(function(imageData) {
+      var url = imageData.text;
+      $scope.newStudyInput = studyDataFactory.getStudyAcccessDataFromUrl(url);
+    }, function(error) {
+      var substudyPopup = $ionicPopup.alert({
+        title: 'Fehler',
+        template: '<p>Es ist ein Fehler aufgegtreten:</p><p>Der QR-Code konnte entweder nicht gelesen werden oder enthielt nicht die benötigten Daten</p>'
+      });
+      substudyPopup;  
+      });
+    };
 
   //Add new study
 
@@ -172,15 +184,10 @@ angular.module('tabete.controllers', [])
     //     });
     //   })
     //   })
-    
-
-
-    dataLayer.getNextQuestiongroup(1).then(function (res) {
-      console.log('Next Questiongroup for 1: ' + res);  
-    });
-    dataLayer.getNextQuestiongroup(2).then(function (res) {
-      console.log('Next Questiongroup for 2: ' + res);  
-    });
+    dataLayer.startSubstudy(substudyId).then(function (questiongroupId) {
+      console.log("Starting substudy, first questiongroup: " + questiongroupId);
+      $state.go('app.questiongroup', {'questiongroupId': questiongroupId});
+    })
 
     
 
@@ -195,16 +202,33 @@ angular.module('tabete.controllers', [])
 
 })
 
-.controller('QuestiongroupCtrl', function($scope, $ionicPlatform, $stateParams, $ionicSideMenuDelegate) {
+.controller('QuestiongroupCtrl', function($scope, $ionicPlatform, $stateParams, $ionicSideMenuDelegate, dataLayer) {
   //Disable Back Button 
   $ionicPlatform.registerBackButtonAction(function (event) {
                     event.preventDefault();
             }, 100);
   //Disable Side Menu
   $scope.allowSideMenu = false;
+  
+  $scope.questiongroup = {};
+  $scope.questions = [];
 
-  console.log($stateParams.questiongroupId);
-  console.log($scope.allowSideMenu);
+  console.log("Starting questiongroup: " + $stateParams.questiongroupId);
+
+  dataLayer.getQuestiongroup($stateParams.questiongroupId).then(function (res) {
+    $scope.questiongroup = res;
+    return res.id;
+  }, function (err) {
+    console.error(err);
+  }).then(function (qgId) {
+    return dataLayer.getQuestionsByQuestiongroupId(qgId);
+  }, function (err) {
+    console.erro(err);
+  }).then(function (qs) {
+    $scope.questions = qs;
+    console.log($scope.questions);
+  })
+
 
 })  
 
