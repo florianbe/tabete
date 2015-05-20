@@ -121,13 +121,44 @@ angular.module('tabete.services', ['ngCordova'])
 
 		}
 
-		var _compareStudyVersion = function(studyId) {
+		this.compareStudyVersion = function(studyId) {
 			
 			var comparator = {
-				study_id: 	studyId
+				local_data: 	{ studyId: studyId }
 			};
 
-			var url = "SELECT "
+			var query = "SELECT studies.password AS password, studies.remote_id AS remote_id, studies.version AS version, servers.url AS url FROM studies INNER JOIN servers ON studies.server_id = servers.id WHERE studies.id = ?";
+			return $cordovaSQLite.execute(db, query, [comparator.local_data.studyId]).then(function(res) {
+				if (res.rows.length > 0) {
+					comparator.remote_data = {
+						studyServer:	res.rows.item(0).url,
+						studyId: 		res.rows.item(0).remote_id,
+						studyPassword: 	res.rows.item(0).password,
+					}
+					comparator.local_data.version = res.rows.item(0).version;
+
+				}
+				return comparator;
+			}, function (err) {
+				console.error(err);
+			}).then(function (res) {
+				console.log(res);
+				
+				var url = _getUrl(res.remote_data, 'getStudyVersion');
+					
+					return $http.get(url).then(function(data) {
+					if (data.status === 200 & typeof data.data.study.version !== 'undefined') {
+						res.remote_data.version = data.data.study.version;				
+					}
+					else {
+						res.remote_data.version = null;
+					}
+					return res;
+      			})
+      			//devTest.printJsonString(data.data.study);
+      		}, function (err) {
+				console.error(err);
+			})
 		};
 
 		//Tries to retrieve a Subject id based on the server
@@ -788,6 +819,8 @@ angular.module('tabete.services', ['ngCordova'])
 				console.error(err);
 			})})
 		};
+
+
 
 
 

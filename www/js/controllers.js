@@ -68,7 +68,7 @@ angular.module('tabete.controllers', [])
   };
 })
 
-.controller('StudiesCtrl', function($scope, $state, $ionicPlatform, $ionicModal, $ionicPopup, $localstorage, $cordovaBarcodeScanner, $http, dataLayer, devTest) {
+.controller('StudiesCtrl', function($scope, $state, $ionicPlatform, $ionicModal, $ionicPopup, $localstorage, $cordovaBarcodeScanner, $http, dataLayer, devTest, $cordovaLocalNotification, $rootScope) {
 // DEVTEST Data
   $scope.t_studies = [
     { title: 'Zeitverwendung im Studienalltag', id: 1 },
@@ -93,7 +93,48 @@ angular.module('tabete.controllers', [])
 
   $scope.testDatabaseAccess = function() {
     //devTest.testDataBase();
+    dataLayer.compareStudyVersion(1).then( function(res) {
+      console.log(res);
+    });
   }
+
+  $scope.testLocalNotification = function () {
+    alert("test");
+
+
+    var alarmTime = new Date();
+    alarmTime.setMinutes(alarmTime.getMinutes() + 1);
+    $cordovaLocalNotification.schedule({
+        id: "1234",
+        date: alarmTime,
+        message: "This is a message",
+        title: "This is a title",
+        data: {
+          substudy_id: 1
+        }
+    }).then(function () {
+        console.log("The notification has been set");
+    });
+  }
+
+  $rootScope.$on('$cordovaLocalNotification:trigger',
+    function (event, notification, state) {
+      console.log('trigger');
+      console.log(event);
+      console.log(notification);
+      console.log(state);
+      alert("A loc Not was triggered");
+      $state.go('app.questiongroup', {'questiongroupId': notification.data.substudy_id});
+    });
+
+  $rootScope.$on('$cordovaLocalNotification:click',
+    function (event, notification, state) {
+      console.log('click');
+      console.log(event);
+      console.log(notification);
+      console.log(state);
+      alert("A loc Not was clicked");
+    });
 
   $scope.substudies = [];
   $scope.substudies = null;
@@ -230,18 +271,5 @@ angular.module('tabete.controllers', [])
   })
 
 
-})  
-
-.controller('PlaylistsCtrl', function($scope) {
-  $scope.playlists = [
-    { title: 'Reggae', id: 1 },
-    { title: 'Chill', id: 2 },
-    { title: 'Dubstep', id: 3 },
-    { title: 'Indie', id: 4 },
-    { title: 'Rap', id: 5 },
-    { title: 'Cowbell', id: 6 }
-  ];
-})
-
-.controller('PlaylistCtrl', function($scope, $stateParams) {
 });
+
