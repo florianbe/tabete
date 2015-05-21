@@ -4,8 +4,43 @@
     <div class="row">
    		<div class="col text-center"><h4>{{questiongroup.name}}</h4></div>
 	</div>
-
-
+	 
+	 <ul class="list">
+	 <div ng-repeat="question in questions">
+        <div ng-switch on="question.type">
+  			<div ng-switch-when="BOOLEAN">
+  				<label class="item item-input item-stacked-label">
+	    			<span class="input-label">{{question.text}}</span>
+	    			<ion-radio ng-model="question" ng-value="true">Ja</ion-radio>
+					<ion-radio ng-model="question" ng-value="false">Nein</ion-radio>
+				</label>
+  			</div>
+  			<div ng-switch-when="NUMERIC">
+    			<label class="item item-input item-stacked-label">
+    				<span class="input-label">{{question.text}}</span>
+    			</label>
+  			</div>
+  			<div ng-switch-when="SINGLECHOICE">
+    			<p>Singlechoice</p>
+  			</div>
+  			<div ng-switch-when="SLIDER">
+    			<p>Slider</p>
+  			</div>
+  			<div ng-switch-when="MULTICHOICE">
+    			<p>Multichoice</p>
+  			</div>
+  			<div ng-switch-when="MOODMAP">
+    			<p>Circumplex</p>
+  			</div>
+  			<div ng-switch-when="TEXT">
+				<label class="item item-input">
+					<span class="input-label">Username</span>
+				  	<input type="text">
+				</label>
+  			</div>
+		</div>        
+      </div>
+      </ul>
   </ion-content>
   <ion-footer-bar class="bar-energized" ng-if="settings.testmode">
   	<h1 class="title">Testmodus</h1>
