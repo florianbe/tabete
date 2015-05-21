@@ -68,7 +68,7 @@ angular.module('tabete.controllers', [])
   };
 })
 
-.controller('StudiesCtrl', function($scope, $state, $ionicPlatform, $ionicModal, $ionicPopup, $localstorage, $cordovaBarcodeScanner, $http, dataLayer, devTest, $cordovaLocalNotification, $rootScope) {
+.controller('StudiesCtrl', function($scope, $state, $ionicPlatform, studyServices, $ionicLoading, $ionicModal, $q, $ionicPopup, $localstorage, $cordovaBarcodeScanner, $http, dataLayer, devTest, $cordovaLocalNotification, $rootScope) {
 // DEVTEST Data
   $scope.t_studies = [
     { title: 'Zeitverwendung im Studienalltag', id: 1 },
@@ -88,14 +88,37 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.testDataImport = function() {
-    devTest.testImport();
+    //devTest.testImport();
+
+    studyData = null;
+    studyData = {
+        studyServer:  'http://tabea.dev:8080',
+        studyName:    'te_stu',
+        studyPassword:  'geheim', 
+    }
+
+    studyServices.importNewStudy(studyData);
+    $scope.updateStudies();
   }
 
   $scope.testDatabaseAccess = function() {
     //devTest.testDataBase();
-    dataLayer.compareStudyVersion(1).then( function(res) {
-      console.log(res);
-    });
+    // dataLayer.compareStudyVersion(1).then( function(res) {
+    //   console.log(res);
+    // });
+
+
+      studyData = {
+        studyServer:  'http://tabea.dev:8080',
+        studyName:    'te_stu',
+        studyPassword:  'geheim', 
+        studyId:      1
+      };
+    // dataLayer.checkIfStudyExists(studyData).then(function (res) {
+    //   console.log(res);
+    // })
+    dataLayer.getStudyDataFromServer(studyData);
+
   }
 
   $scope.testLocalNotification = function () {
@@ -142,6 +165,12 @@ angular.module('tabete.controllers', [])
   $scope.allowSideMenu = true;
   $scope.newStudyInput = {};
 
+  $scope.synchronizeData = function() {
+    studyServices.syncTest(1).then(function (res) {
+      console.log('done');
+    })
+  }
+
   //Set view mode: list of substudies or info none
   $scope.checkForSubstudies = function() {
     if ($scope.substudies !== undefined && $scope.substudies !== null && $scope.substudies.length > 0) {
@@ -152,7 +181,7 @@ angular.module('tabete.controllers', [])
     }
   }
 
-  //Updata study list
+  //Update study list
   $scope.updateStudies = function () {
     $ionicPlatform.ready(function() 
       { dataLayer.getStudiesWithSubstudies().then(function (res) {

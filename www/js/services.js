@@ -72,7 +72,10 @@ angular.module('tabete.services', ['ngCordova'])
 
 		this.testImport = function() {
 			this.testHttp();
-			dataLayer.insertStudy(studyData, jsonStudyData);
+			importData = {};
+			importData.studyData = studyData;
+			importData.jsonStudyData = jsonStudyData;
+			dataLayer.insertStudy(importData);
 			console.log('dev: Data import finished');
 		};
 
@@ -97,7 +100,7 @@ angular.module('tabete.services', ['ngCordova'])
 		var _studyData = {};
 		var _jsd = {};
 
-		var _getUrl = function(studyData, api_code) {
+		this.getUrl = function(studyData, api_code) {
 			switch(api_code) {
 				case 'getSubjectId':
 					return	studyData.studyServer +  '/api/v1/testsubjects/new';
@@ -115,11 +118,103 @@ angular.module('tabete.services', ['ngCordova'])
 					return	studyData.studyServer +  '/api/v1/study/' + studyData.studyId + '?password=' + studyData.studyPassword;
 					break;
 			}
-		};
-
-		var _generateStudyData = function() {
-
 		}
+
+
+
+		this.checkIfStudyExists = function(studyData) {
+			var query = "SELECT studies.remote_id, servers.url FROM studies INNER JOIN servers ON studies.server_id = servers.id WHERE studies.remote_id = ? AND servers.url = ?";
+
+			return $cordovaSQLite.execute(db, query, [studyData.studyId, studyData.studyServer]).then(function (res) {
+				if (res.rows.length > 0) {
+					studyData.alreadyExists = true;
+				}
+				else {
+					studyData.alreadyExists = false;
+				}
+				return studyData;
+			})
+		}
+
+		this.getStudyIdFromServer = function(studyData) {
+			var url = this.getUrl(studyData, 'getStudyId');
+
+  
+
+			return $http.get(url).then(function (data) {
+				if (data.status === 200 & typeof data.data.study_id !== 'undefined') {
+					studyData.studyId = data.data.study_id;				
+				}
+				else {
+					return $q.reject('getStudyIdFromServer: No valid response');
+				}
+				return studyData;
+			})
+		}
+
+		this.getStudyDataFromServer = function(inputData) {
+			var url = this.getUrl(inputData.studyData, 'getStudyData');
+
+			return $http.get(url).then(function (data) {
+			
+				if (data.status === 200 & typeof data.data.study !== 'undefined') {
+					inputData.jsonStudyData = data.data.study;				
+				}
+				else {
+  				  	return $q.reject('getStudyDataFromServer: no valid response');
+				}
+
+
+				return inputData;
+			})
+		}
+
+		this.getStudyDataObject = function (studyId) {
+			studyData = {};
+
+			var query = "SELECT studies.password, studies.remote_id, servers.url FROM studies INNER JOIN servers ON studies.server_id = servers.id WHERE studies.id = ?";
+			return $cordovaSQLite.execute(db, query, [studyId]).then(function (res) {
+				if (res.rows.length > 0) {
+					studyData.studyId 		= res.rows.item(0).remote_id,
+					studyData.studyServer 	= res.rows.item(0).url;
+					studyData.studyPassword = res.rows.item(0).password;
+					studyData.localId 		= studyId;
+				}
+				return studyData;
+			})
+		}
+
+		this.validateStudyData = function(jsonStudyData) {
+		  	//Study must have at least one Substudy
+		  	if (!jsonStudyData.substudies) {
+		  		console.error('validate Study Data: no substudies');
+		  		return false;  		
+		  	}
+
+		  	for (var i = 0; i < jsonStudyData.substudies.length; i++) {
+		  		var substudy = jsonStudyData.substudies[i];
+
+		  		// if substudy is not event-based --> check for signal times
+		  		if (!(substudy.trigger === 'EVENT') && !substudy.trigger_signals && substudy.trigger_signals.length < 1){
+		  			console.error('validate Study Data: trigger based study with no signal times');
+		  			return false;
+		  		}
+		  		// substudy must have at least one question group
+		  		if (!substudy.questiongroups && substudy.questiongroups.length < 1) {
+		  			console.error('validate Study Data: Substudy has no Question Groups');
+		  			return false;
+		  		}
+		  		//questiongroup must have at least one question
+		  		for (var j = 0; j < substudy.questiongroups.length; j++) {
+		  			if (!substudy.questiongroups[i].questions && substudy.questiongroups[i].questions.length < 1)
+		  			{
+						console.error('validate Study Data: Question Group has no Questions');
+		  				return false;
+		  			}
+		  		}
+			}  	
+		 	return true;
+  		}
 
 		this.compareStudyVersion = function(studyId) {
 			
@@ -142,9 +237,8 @@ angular.module('tabete.services', ['ngCordova'])
 			}, function (err) {
 				console.error(err);
 			}).then(function (res) {
-				console.log(res);
 				
-				var url = _getUrl(res.remote_data, 'getStudyVersion');
+				var url = this.getUrl(res.remote_data, 'getStudyVersion');
 					
 					return $http.get(url).then(function(data) {
 					if (data.status === 200 & typeof data.data.study.version !== 'undefined') {
@@ -159,35 +253,64 @@ angular.module('tabete.services', ['ngCordova'])
       		}, function (err) {
 				console.error(err);
 			})
-		};
+		}
+
+		this.getStudies = function() {
+			var query = "SELECT id, end_date, finalupload_date FROM studies";
+			return $cordovaSQLite.execute(db, query, []).then(function (res) {
+				var studies = [];
+				for (var i = 0; i < res.rows.length; i++) {
+					studies.push({
+						id: 					res.rows.item(i).id,
+						end_date: 				res.rows.item(i).end_date,
+						finalupload_date:		res.rows.item(i).finalupload_date
+					})		
+				};
+
+				return studies;
+			})
+		}
+
+		this.deleteOldStudies = function(studies) {
+			for (var i = 0; i < studies.length; i++) {
+				if (Date.parse(studies[i].finalupload_date) < Date.now()){
+					this.deleteStudyByStudyId(studies[i].id);
+					studies.splice(i, 1);
+				}
+			};
+			return studies;
+		}
+
+		this.postAnswersToServer = function(studyData) {
+			console.log('postAnswersToServer: to be done');
+		}
 
 		//Tries to retrieve a Subject id based on the server
 		var _retrieveServerId = function(insertData) {
+			
 			var query = "SELECT id FROM servers WHERE url = ?";
 			return $cordovaSQLite.execute(db, query, [insertData.studyData.studyServer]).then(function(res) {
 				if(res.rows.length > 0) {
-					insertData.server_id = res.rows.item(0).id;        		
+					insertData.studyData.server_id = res.rows.item(0).id;        		
 	            }
 	            else {
-	            	insertData.server_id = false;
+	            	insertData.studyData.server_id = false;
 	            }
+
 	            return insertData;
-			}, function (err) {
-				console.error(err);
 			})
-		};
+		}
 
 		//Generates a new SubjectId serverside
 		var _generateSubjectId = function(insertData) {
-			var req_url = _getUrl(insertData.studyData, 'getSubjectId');
+			var url = insertData.studyData.studyServer +  '/api/v1/testsubjects/new';
 			//console.log(req_url);
-			return $http.get(req_url).then(function(data) {
+			return $http.get(url).then(function(data) {
 	      		insertData.testsubject = data.data.testsubject;  
+	      					console.log(insertData);
 	      		return insertData;
-	  		}, function (err) {
-				console.error(err);
-			})
-		};
+	  		})
+		}
 		
 		//Stores a new SubjectId in database
 		var _storeSubjectId = function(insertData) {
@@ -195,18 +318,18 @@ angular.module('tabete.services', ['ngCordova'])
 				var query = "INSERT INTO servers (url, subject_id, subject_name) VALUES (?, ?, ?)";
 	            return $cordovaSQLite.execute(db, query, [insertData.studyData.studyServer, insertData.testsubject.id, insertData.testsubject.name]).then(function(res) {
 	                //console.log("Rows affected: " + res.rowsAffected);
+	                			console.log(insertData);
 	                return insertData;
-	            }, function (err) {
-	                console.error(err);
-	            });
+	            })
 	        } 
-		};
+		}
 
 		// Either retrieves or generates a SubjectId based on studyData
 		var _getServerId = function(insertData) {
-	    	
+
 	    	return _retrieveServerId(insertData).then (function(insertData2) {
-	    		if (!insertData2.server_id) {
+
+	    		if (!insertData2.studyData.server_id) {
 	    			console.log('Getting new subject_id');
 	    			return _generateSubjectId(insertData2).then(function(insertData3) {
 	    				return _storeSubjectId(insertData3).then(function(insertData4) {
@@ -217,24 +340,22 @@ angular.module('tabete.services', ['ngCordova'])
 	    			});
 				}
 	    		else {
-
+	    		
 	    			return insertData2;
 	    		}
-	    	}, function (err) {
-	    		console.error(err);
 	    	});
-		};
+		}
 
 		// Insert Study Data to Database 
 		var _insertStudyData = function(insertData) {
-			var query = "INSERT INTO studies (version, server_id, remote_id, name, description, state, password, start_date, end_date, finalupload_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-			return $cordovaSQLite.execute(db, query, [insertData.jsonStudyData.version, insertData.server_id, insertData.jsonStudyData.id, insertData.jsonStudyData.title, insertData.jsonStudyData.description, insertData.jsonStudyData.state, insertData.studyData.studyPassword, insertData.jsonStudyData.start_date, insertData.jsonStudyData.end_date, insertData.jsonStudyData.finalupload_date]).then(function (res) {
+			var query = "INSERT INTO studies (version, remote_id, name, description, state, password, start_date, end_date, finalupload_date, server_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			return $cordovaSQLite.execute(db, query, [insertData.jsonStudyData.version, insertData.jsonStudyData.id, insertData.jsonStudyData.title, insertData.jsonStudyData.description, insertData.jsonStudyData.state, insertData.studyData.studyPassword, insertData.jsonStudyData.start_date, insertData.jsonStudyData.end_date, insertData.jsonStudyData.finalupload_date, insertData.studyData.server_id]).then(function (res) {
 				return insertData;
 			}, function(err) {
 				console.error(err);
 			}).then(function (insertData2) {
-				var query = "SELECT id FROM studies WHERE server_id = ? AND remote_id = ?";
-				return $cordovaSQLite.execute(db, query, [insertData.server_id, insertData.jsonStudyData.id]).then(function (res) {
+				var query = "SELECT id FROM studies WHERE remote_id = ? AND server_id = ?";
+				return $cordovaSQLite.execute(db, query, [insertData.jsonStudyData.id, insertData.studyData.server_id]).then(function (res) {
 					if(res.rows.length > 0) {
 						insertData2.jsonStudyData.study_id = res.rows.item(res.rows.length -1).id
 	        		}
@@ -243,10 +364,11 @@ angular.module('tabete.services', ['ngCordova'])
 	            	console.error(err);
 				})
 			})
-		};
+		}
 
 		// Insert Substudy Data to Database
 		var _insertSubStudyData = function(insertData) {
+
 			angular.forEach( insertData.jsonStudyData.substudies, function(substudy) {
 				
 				var query = "INSERT INTO substudies (version, study_id, title, triggertype, description) VALUES (?, ?, ?, ?, ?)";
@@ -265,8 +387,7 @@ angular.module('tabete.services', ['ngCordova'])
                 	})
         		})
             });
-
-		};
+		}
 
 		// Insert Signal Points to Database
 		var _insertSignalPoints = function (substudy_id, signalpoints) {
@@ -274,7 +395,7 @@ angular.module('tabete.services', ['ngCordova'])
 				var query = "INSERT INTO signalpoints (substudy_id, signal_date) VALUES (?, ?)";
 				$cordovaSQLite.execute(db, query, [substudy_id, signalpoint.time]);
 			})
-		};
+		}
 
 		// Insert Question Groups to Database
 		var _insertQuestionGroups = function (substudy_id, questiongroups) {
@@ -326,7 +447,7 @@ angular.module('tabete.services', ['ngCordova'])
 					}
 				})		
 			})
-		};
+		}
 
 		// Insert Question Options to Database
 		var _insertQuestionOptions = function (q_id, options) {
@@ -334,35 +455,30 @@ angular.module('tabete.services', ['ngCordova'])
 				var query = "INSERT INTO questionoptions (question_id, code, description, value) VALUES (?, ?, ?, ?)";
 				$cordovaSQLite.execute(db, query, [q_id, option.code, option.description, option.value]);
 			})
-		};
+		}
 
 		// Wrapper function to insert Data from Study JSON object into Database
-		this.insertStudy = function(studyData, jsonStudyData) {
+		this.insertStudy = function(insertData) {
 			var defer = $q.defer();
 			var promises = [];
 			var substudies = [];
 
-			insertData = {};
-			insertData.studyData = studyData;
-			insertData.jsonStudyData = jsonStudyData
-
+			// insertData = {};
+			// insertData.studyData = studyData;
+			// insertData.jsonStudyData = jsonStudyData
 			
 			_getServerId(insertData).then(function(insertData2) {
 				return _insertStudyData(insertData2);
 			}).then(function(insertData3) {
-				console.log('Study inserted: ' + insertData3.jsonStudyData.study_id)
-				_insertSubStudyData(insertData3);
-			}, function(err) {
-				console.error(err);
-			}).catch(function(err) {
-      			console.error(err);
-			});
-
+				_insertSubStudyData(insertData3);			
+			}).then(function () {
+				return true;
+			})
 
 			$q.all(promises);
 
 			return defer;
-		};
+		}
 
 		//Get all studies with substudies
 		this.getStudiesWithSubstudies = function() {
@@ -645,9 +761,9 @@ angular.module('tabete.services', ['ngCordova'])
         }
 
         var _setAnswerObject = function(answerObject, substudyId) {
+
         	$localstorage.setObject('answers_' + substudyId, answerObject);
         }
-
 
         this.startSubstudy = function (substudyId) {
         	//Generate new answer object
@@ -732,8 +848,7 @@ angular.module('tabete.services', ['ngCordova'])
         		console.error(err);
         	})
         }
-     		
-        
+     		        
         this.saveAnswers = function (jsonAnswerData, substudyId, inTestMode) {
         	var query = "INSERT INTO answers (question_id, answer, testanswer, answer_date, signal_date) VALUES (?, ?, ?, ?, ?)";
         	//Get answer object for signal_date
@@ -741,7 +856,6 @@ angular.module('tabete.services', ['ngCordova'])
 
         	//Iterate over answer data
         	$cordovaSQLite.execute(db, query, [studyId]);
-
         }
 
         this.finishSubstudy = function (questiongroupId) {
@@ -750,9 +864,7 @@ angular.module('tabete.services', ['ngCordova'])
         	});
 		}
 
-
-
-        //Delete study with given id
+		//Delete study with given id
         //DELETE a complete study by studyId
 		this.deleteStudyByStudyId = function(studyId) {
 			//answers
@@ -819,10 +931,144 @@ angular.module('tabete.services', ['ngCordova'])
 				console.error(err);
 			})})
 		};
-
-
-
-
-
+        
 		return self;
-	});
+	})
+.factory('studyServices', function($ionicPlatform, $ionicLoading, $ionicModal, $q, $ionicPopup, $localstorage, $cordovaBarcodeScanner, $http, dataLayer, devTest, $cordovaLocalNotification) {
+
+	var self = this;
+
+	var _showLoadScreen = function () {
+		$ionicLoading.show({
+	        template: '<p>Synchronisiert...</p><ion-spinner></ion-spinner>'
+	      });
+	}
+
+	var _hideLoadScreen = function () {
+
+		$ionicLoading.hide();
+	}
+
+	var _displayInfoMessage = function (message) {
+
+		var alertPopup = $ionicPopup.alert(message);
+	}
+
+	this.importNewStudy = function (studyData) {
+		var url = dataLayer.getUrl(studyData);
+
+		console.log(studyData);
+
+		_showLoadScreen();
+
+		return dataLayer.getStudyIdFromServer(studyData).then(function (studyDataWithRemoteId) {
+
+			return dataLayer.checkIfStudyExists(studyDataWithRemoteId);
+		}).then(function (studyDataChecked) {
+			console.log(studyDataChecked);
+			if (studyDataChecked.alreadyExists) {
+			
+				return $q.reject('Study already exists');
+			} else {
+				var insertData = {};
+				insertData.studyData = studyData;
+				return dataLayer.getStudyDataFromServer(insertData);
+			}
+		}).then(function (studyDataCompleteDownload) {
+			console.log(studyDataCompleteDownload);
+			if(dataLayer.validateStudyData(studyDataCompleteDownload.jsonStudyData)) {
+				return dataLayer.insertStudy(studyDataCompleteDownload)
+			} else {
+				return $q.reject('Study data could not be validated');
+			}
+		}).then(function (res) {
+			_hideLoadScreen();
+			return res;
+		}).catch(function(err) {
+			_hideLoadScreen();
+			if (err == 'Study already exists') {
+				_displayInfoMessage({title: 'Studie bereits vorhanden', template: 'Die Studie ist bereits auf dem Gerät vorhanden.'});
+			} else {
+				_displayInfoMessage({title: 'Datenimport fehlgeschlagen', template: 'Die Studie konnte nicht importiert werden.'});	
+			}
+			console.error(err);
+		})
+	}
+
+	this.syncTest = function (studyId) {
+	
+	}
+
+	this.synchronizeData = function (){
+		//Get all studies
+	    var deferred = $q.defer();
+	    var studyHandling = [];
+
+	    var showLoadScreen = function () {
+	      //Show spinner
+	      $ionicLoading.show({
+	        template: '<p>Synchronisiert...</p><ion-spinner></ion-spinner>'
+	      });
+	    }
+
+	    var hideLoadScreen = function () {
+	      $ionicLoading.hide();
+	    }
+	    
+	    showLoadScreen();
+
+	    dataLayer.getStudies().then(function (studies) {
+	    //Clear old studies
+	      return dataLayer.deleteOldStudies(studies);
+	    }).then(function (studies_cleared) {
+	      $scope.updateStudies();
+	    //For all studies
+	      for (var i = 0; i < studies_cleared.length; i++) {
+	    //Check if remote version !== local version
+	        var studyData = {};
+	        dataLayer.compareStudyVersion(studies_cleared[i].id).then(function (compared_versions){
+	          if (compared_versions.local_data.version !== compared_versions.remote_data.version) {
+	            console.log('Study with id ' + compared_versions.local_data.studyId + ': Syncing Answers');
+	            studyHandling.push(dataLayer.postAnswersToServer(compared_versions));
+	          } else {
+	            console.log('Study with id ' + compared_versions.local_data.studyId + ': local and remote versions are different. Resyncing.');
+	            studyHandling.push(
+	              dataLayer.getStudyDataObject(compared_versions.local_data.studyId).then(function (studOb) { 
+	                studyData = studOb;
+	                console.log(studyData.localId);
+	                dataLayer.deleteStudyByStudyId(studyData.localId)
+	              }).then(function () {
+	                return dataLayer.getStudyDataFromServer(studyData);
+	              }).then(function(insertData) {
+	                if(dataLayer.validateStudyData(insertData.jsonStudyData)) {
+	                  dataLayer.insertStudy(insertData);
+	                };
+	              })
+
+	              );
+	          }
+	        })
+	        console.log(studies_cleared[i]);
+	      };
+	    }).then(function (res) {
+	      console.log('done');
+	      // $ionicLoading.hide();
+	    }).catch(function (err) {
+	      console.error(err);
+	      $ionicLoading.hide();
+	    });
+
+	    $q.all(studyHandling).then( function (done) {
+	      deferred.resolve();
+	      $ionicLoading.hide();
+
+	    }).catch(function (err) {
+	      console.error(err);
+	      $ionicLoading.hide();
+	    })
+	}
+
+
+	return self;
+
+});
