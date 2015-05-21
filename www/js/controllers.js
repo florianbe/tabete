@@ -102,22 +102,8 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.testDatabaseAccess = function() {
-    //devTest.testDataBase();
-    // dataLayer.compareStudyVersion(1).then( function(res) {
-    //   console.log(res);
-    // });
+    studyServices.syncTest();
 
-
-      studyData = {
-        studyServer:  'http://tabea.dev:8080',
-        studyName:    'te_stu',
-        studyPassword:  'geheim', 
-        studyId:      1
-      };
-    // dataLayer.checkIfStudyExists(studyData).then(function (res) {
-    //   console.log(res);
-    // })
-    dataLayer.getStudyDataFromServer(studyData);
 
   }
 
@@ -163,7 +149,11 @@ angular.module('tabete.controllers', [])
   $scope.substudies = null;
   $scope.hasSubstudies = false;
   $scope.allowSideMenu = true;
-  $scope.newStudyInput = {};
+  $scope.newStudyInput = {
+    studyServer:  "",
+    studyName:    "",
+    studyPassword: "" 
+  };
 
   $scope.synchronizeData = function() {
     studyServices.syncTest(1).then(function (res) {
@@ -217,27 +207,26 @@ angular.module('tabete.controllers', [])
   };
 
   $scope.closeNewStudy = function() {
-    
     $scope.newStudyInput = {};
     $scope.modalNewStudy.hide();
   };
 
   //Add new study via QR-Code
-  $scope.scanNewStudy = function() {
-    $cordovaBarcodeScanner.scan().then(function(imageData) {
-      var url = imageData.text;
-      $scope.newStudyInput = studyDataFactory.getStudyAcccessDataFromUrl(url);
-    }, function(error) {
-      var substudyPopup = $ionicPopup.alert({
-        title: 'Fehler',
-        template: '<p>Es ist ein Fehler aufgegtreten:</p><p>Der QR-Code konnte entweder nicht gelesen werden oder enthielt nicht die benötigten Daten</p>'
-      });
-      substudyPopup;  
-      });
-    };
+  $scope.scanNewStudy = function () {
+    studyServices.decodeStudyDataFromQrCode().then(function (decodedData) {
+      $scope.newStudyInput = decodedData;
+    })
+  }
 
   //Add new study
-
+  $scope.addNewStudy = function () {
+    if ($scope.newStudyInput.studyServer != undefined && $scope.newStudyInput.studyServer != "" && $scope.newStudyInput.studyName != undefined && $scope.newStudyInput.studyName != "" && $scope.newStudyInput.studyPassword!= undefined && $scope.newStudyInput.studyPassword != "") {
+          studyServices.importNewStudy($scope.newStudyInput).then(function (res) {
+              $scope.updateStudies();
+              $scope.closeNewStudy();        
+          });
+    } 
+  }
   $scope.loadSubstudy = function(substudyId) {
     var substudyData = {};
     

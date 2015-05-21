@@ -931,6 +931,33 @@ angular.module('tabete.services', ['ngCordova'])
 				console.error(err);
 			})})
 		};
+
+
+		var getPathFromUrl = function(url) {
+    		return url.split("?")[0];
+  		};
+
+  		var getParameterFromUrl = function(url, parameter) { 
+    		var params = url.split('?')[1].split('&');
+   
+			for (var i = 0; i < params.length; i++) {
+      			var p=params[i].split('=');
+    			if (p[0] == parameter) {
+      				return decodeURIComponent(p[1]);
+    			}
+    		}
+    		return '';
+  		};
+
+  		this.getStudyAcccessDataFromUrl = function(url)  {
+  			decodedData = {};
+
+    		decodedData.studyServer = getPathFromUrl(url);
+    		decodedData.studyName = getParameterFromUrl(url, 'study');
+    		decodedData.studyPassword = getParameterFromUrl(url, 'password');
+
+    		return decodedData;
+  		};
         
 		return self;
 	})
@@ -954,6 +981,9 @@ angular.module('tabete.services', ['ngCordova'])
 		var alertPopup = $ionicPopup.alert(message);
 	}
 
+	this.infoMessage = _displayInfoMessage;
+
+	//Imports a new study into database 
 	this.importNewStudy = function (studyData) {
 		var url = dataLayer.getUrl(studyData);
 
@@ -995,8 +1025,34 @@ angular.module('tabete.services', ['ngCordova'])
 		})
 	}
 
-	this.syncTest = function (studyId) {
-	
+	//Scans a QR-Code and decodes the contained studyData object 
+	this.decodeStudyDataFromQrCode = function () {
+		return $cordovaBarcodeScanner.scan().then(function(imageData) {
+      		var url = imageData.text;
+      		var decodedData = dataLayer.getStudyAcccessDataFromUrl(url);
+
+      		if (decodedData.studyServer === '' || decodedData.studyServer === undefined || decodedData.studyName === '' || decodedData.studyPassword === '' ) {
+      			console.error(decodedData);
+      			return $q.reject('decodeStudyDataFromQrCode: data could not be decoded');
+      		}
+      		return decodedData;
+
+    	}).catch( function (err) {
+      		_displayInfoMessage({
+        		title: 'QR-Code',
+        		template: '<p>Es ist ein Fehler aufgegtreten:</p><p>Der QR-Code konnte entweder nicht gelesen werden oder enthielt nicht die benötigten Daten</p>'
+      		});
+      	});
+    }
+
+
+	this.syncTest = function () {
+		var query = "SELECT * FROM studies"
+		$cordovaSQLite.execute(db, query, []).then (function (res) {
+			console.log(res);
+		}).catch(function (err) {
+			console.log(err);
+		})
 	}
 
 	this.synchronizeData = function (){
