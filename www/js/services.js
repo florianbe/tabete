@@ -216,14 +216,15 @@ angular.module('tabete.services', ['ngCordova'])
 		 	return true;
   		}
 
-		this.compareStudyVersion = function(studyId) {
-			
+		this.compareStudyVersion = function(localData) {
+			var comparatar = null;
 			var comparator = {
-				local_data: 	{ studyId: studyId }
+				local_data: 	{ studyId: localData.id }
 			};
 
 			var query = "SELECT studies.password AS password, studies.remote_id AS remote_id, studies.version AS version, servers.url AS url FROM studies INNER JOIN servers ON studies.server_id = servers.id WHERE studies.id = ?";
 			return $cordovaSQLite.execute(db, query, [comparator.local_data.studyId]).then(function(res) {
+
 				if (res.rows.length > 0) {
 					comparator.remote_data = {
 						studyServer:	res.rows.item(0).url,
@@ -236,18 +237,18 @@ angular.module('tabete.services', ['ngCordova'])
 				return comparator;
 			}, function (err) {
 				console.error(err);
-			}).then(function (res) {
-				
-				var url = this.getUrl(res.remote_data, 'getStudyVersion');
+			}).then(function (res2) {
+
+				var url = res2.remote_data.studyServer +  '/api/v1/study/' + res2.remote_data.studyId + '/version?password=' + res2.remote_data.studyPassword;
 					
 					return $http.get(url).then(function(data) {
 					if (data.status === 200 & typeof data.data.study.version !== 'undefined') {
-						res.remote_data.version = data.data.study.version;				
+						res2.remote_data.version = data.data.study.version;				
 					}
 					else {
-						res.remote_data.version = null;
+						res2.remote_data.version = null;
 					}
-					return res;
+					return res2;
       			})
       			//devTest.printJsonString(data.data.study);
       		}, function (err) {
@@ -927,6 +928,7 @@ angular.module('tabete.services', ['ngCordova'])
 				var query = "DELETE FROM studies WHERE id = ?";
 				return $cordovaSQLite.execute(db, query, [studyId]).then(function(res){
 					console.log("Deleted: study " + studyId + ". Rows affected: " + res.rowsAffected);
+					return studyId;
 			}, function (err){
 				console.error(err);
 			})})
@@ -980,6 +982,48 @@ angular.module('tabete.services', ['ngCordova'])
 
 		var alertPopup = $ionicPopup.alert(message);
 	}
+
+	var _syncStudy = function (syncStudyData) {
+		return dataLayer.compareStudyVersion(syncStudyData).then(function (compared_versions){
+			if (compared_versions.local_data.version === compared_versions.local_data.version) {
+				return dataLayer.postAnswersToServer(compared_versions);
+			}
+			else {
+				var inputData = { studyData: compared_versions.remote_data }
+				return dataLayer.deleteStudyByStudyId(compared_versions.local_data.studyId).then(function (res) {
+					console.log(inputData);
+					return dataLayer.getStudyDataFromServer(inputData);
+				}).then(function (importData) {
+					if(dataLayer.validateStudyData(importData.jsonStudyData)) {
+						return dataLayer.insertStudy(importData)
+					} else {
+						return $q.reject('Study data could not be validated');
+					}
+				})
+			}
+		})
+	}
+
+	// 		if (compared_versions.local_data.version !== compared_versions.remote_data.version) {
+	//             console.log('Study with id ' + compared_versions.local_data.studyId + ': Syncing Answers');
+	//             studyHandling.push(dataLayer.postAnswersToServer(compared_versions));
+	//           } else {
+	//             console.log('Study with id ' + compared_versions.local_data.studyId + ': local and remote versions are different. Resyncing.');
+	//             studyHandling.push(
+	//               dataLayer.getStudyDataObject(compared_versions.local_data.studyId).then(function (studOb) { 
+	//                 studyData = studOb;
+	//                 console.log(studyData.localId);
+	//                 dataLayer.deleteStudyByStudyId(studyData.localId)
+	//               }).then(function () {
+	//                 return dataLayer.getStudyDataFromServer(studyData);
+	//               }).then(function(insertData) {
+	//                 if(dataLayer.validateStudyData(insertData.jsonStudyData)) {
+	//                   dataLayer.insertStudy(insertData);
+	//                 };
+	//               })
+
+	//               );
+	// }
 
 	this.infoMessage = _displayInfoMessage;
 
@@ -1045,6 +1089,30 @@ angular.module('tabete.services', ['ngCordova'])
       	});
     }
 
+    //Synchronizes all data on device with the corresponding servers
+    this.synchronizeData = function () {
+    	var deferred = $q.defer();
+    	var studyHandling = [];
+
+		_showLoadScreen();
+
+    	return dataLayer.getStudies().then(function (studies) {
+    		return dataLayer.deleteOldStudies(studies);
+    	}).then(function (currentStudies) {
+    		for (var i = 0; i < currentStudies.length; i++) {
+    			studyHandling.push(_syncStudy(currentStudies[i]));
+    		}
+    		return $q.all(studyHandling);
+    	}).then(function (results) {
+    		console.log(results);
+    		_hideLoadScreen();
+    		return results;
+    	}).catch(function (err) {
+    		_hideLoadScreen();
+    		console.error(err);
+    	})
+    }
+
 
 	this.syncTest = function () {
 		var query = "SELECT * FROM studies"
@@ -1055,7 +1123,7 @@ angular.module('tabete.services', ['ngCordova'])
 		})
 	}
 
-	this.synchronizeData = function (){
+	this.synchronizeData2 = function (){
 		//Get all studies
 	    var deferred = $q.defer();
 	    var studyHandling = [];

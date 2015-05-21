@@ -155,11 +155,7 @@ angular.module('tabete.controllers', [])
     studyPassword: "" 
   };
 
-  $scope.synchronizeData = function() {
-    studyServices.syncTest(1).then(function (res) {
-      console.log('done');
-    })
-  }
+  
 
   //Set view mode: list of substudies or info none
   $scope.checkForSubstudies = function() {
@@ -227,6 +223,14 @@ angular.module('tabete.controllers', [])
           });
     } 
   }
+
+  //Synchronize all Data on Device
+  $scope.synchronizeData = function() {
+    studyServices.synchronizeData().then(function (res) {
+      console.log('done');
+    })
+  }
+  
   $scope.loadSubstudy = function(substudyId) {
     var substudyData = {};
     
