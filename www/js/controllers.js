@@ -102,7 +102,7 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.testDatabaseAccess = function() {
-    studyServices.syncTest();
+    devTest.testDataBase();
 
 
   }

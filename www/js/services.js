@@ -1,5 +1,5 @@
 angular.module('tabete.services', ['ngCordova'])
-	.factory('devTest', function($ionicPlatform, $http, $cordovaSQLite, $q, dataLayer) {
+	.factory('devTest', function($ionicPlatform, $http, $cordovaSQLite, $q, dataLayer, $localstorage) {
 		var self = this;
 		// var url = "http://anthill-inside.net/tabea_test/api/v1/study/1?password=zeitver2015";
     	var url = "http://tabea.dev:8080/api/v1/study/1?password=geheim";
@@ -81,13 +81,38 @@ angular.module('tabete.services', ['ngCordova'])
 
 		this.testDataBase = function() {
 			
-			dataLayer.deleteStudyByStudyId(1).then(function () {
-				dataLayer.getStudiesWithSubstudies().then(function (res) {
-				console.log(res[0]);
-				
-				})				
-			});
+			substudy_answers = {}
+			substudy_answers.substudyId	= 1;
+        	substudy_answers.signaltime = Date.now();
+        	substudy_answers.answers 	= [];
 
+        	      	
+        	$localstorage.setObject('answers_1', substudy_answers);
+
+
+			dataLayer.getNextQuestiongroup(1).then(function (id1) {
+				console.log('first id: ' + id1);
+				var sustu_answers = $localstorage.getObject('answers_1');
+				sustu_answers.answers.push({
+        			question_id: 	2,
+        			answer: 	'2'
+        		})
+        		$localstorage.setObject('answers_' + 1, sustu_answers);
+        		
+        		return dataLayer.getNextQuestiongroup(1);
+			}).then(function (id2) {
+				console.log('second id:' + id2);
+				var sustu_answers = $localstorage.getObject('answers_1');
+				sustu_answers.answers[0] = {
+        			question_id: 	3,
+        			answer: 	'BOING;LIKERT_4_1'
+        		};
+        		$localstorage.setObject('answers_' + 1, sustu_answers);
+				return dataLayer.getNextQuestiongroup(1);
+			}).then(function (id3) {
+				console.log('third id:' + id3);
+				$localstorage.setObject('answers_1', null);	
+			})
 		}
 
 		return self;
@@ -738,7 +763,7 @@ angular.module('tabete.services', ['ngCordova'])
         var _initAnswerObject = function(substudyId) {
         	//Overwrite the variable in localstorage just in case
         	var substudy_answers = {};
-        	substudy_answers.id 		= substudyId;
+        	substudy_answers.substudyId 		= substudyId;
         	substudy_answers.signaltime = Date.now();
         	substudy_answers.answers 	= [];
 
@@ -755,6 +780,7 @@ angular.module('tabete.services', ['ngCordova'])
 
 			  if (!substudy_answers.hasOwnProperty('substudyId'))
 			  {
+			  	console.log('no answer object found creating new one');
 			  	substudy_answers = _initAnswerObject(substudyId);
 			  }
 
@@ -796,24 +822,22 @@ angular.module('tabete.services', ['ngCordova'])
         		var nextQuestiongroupId = -1;
         		var answerObject = _getAnswerObject(dataset_qg.substudy_id);
 
-        		console.log(answerObject);
-        		console.log(dataset_qg.questiongroups);
-        		console.log("QG ID " + questiongroupId);
+        		// console.log(answerObject);
+        		// console.log(dataset_qg.questiongroups);
+        		// console.log("QG ID " + questiongroupId);
 
         		var nextQgIndex = dataset_qg.questiongroups.map(function (e) { return e.id}).indexOf(questiongroupId) + 1;
         		
-        		console.log("QG Index " + nextQgIndex);
+        		// console.log("QG Index " + nextQgIndex);
         		
         		for (var i = nextQgIndex; i < dataset_qg.questiongroups.length; i++) {
-        			console.log("In Index " + i);
-        			console.log(dataset_qg.questiongroups[i]);
-
         			if (dataset_qg.questiongroups[i].rules.length > 0) {
         				var ruleIsMet = false;
         				var daRule = dataset_qg.questiongroups[i].rules;
         				for (var j = 0; j < daRule.length; j++) {
         					var answerIndex = answerObject.answers.map(function(e) { return e.question_id }).indexOf(daRule[j].question_id);
-
+        					// console.log("answer index:" + answerIndex);
+        					// console.log(answerObject.answers[answerIndex]);
         					if (answerIndex !== -1) {
         						//Check if string contains ';' --> multichoice answer - to be split in array
         						if (answerObject.answers[answerIndex].answer.indexOf(';') !== -1) {
@@ -983,6 +1007,7 @@ angular.module('tabete.services', ['ngCordova'])
 		var alertPopup = $ionicPopup.alert(message);
 	}
 
+	//Sync a single study - Helper method
 	var _syncStudy = function (syncStudyData) {
 		return dataLayer.compareStudyVersion(syncStudyData).then(function (compared_versions){
 			if (compared_versions.local_data.version === compared_versions.local_data.version) {
@@ -1003,27 +1028,6 @@ angular.module('tabete.services', ['ngCordova'])
 			}
 		})
 	}
-
-	// 		if (compared_versions.local_data.version !== compared_versions.remote_data.version) {
-	//             console.log('Study with id ' + compared_versions.local_data.studyId + ': Syncing Answers');
-	//             studyHandling.push(dataLayer.postAnswersToServer(compared_versions));
-	//           } else {
-	//             console.log('Study with id ' + compared_versions.local_data.studyId + ': local and remote versions are different. Resyncing.');
-	//             studyHandling.push(
-	//               dataLayer.getStudyDataObject(compared_versions.local_data.studyId).then(function (studOb) { 
-	//                 studyData = studOb;
-	//                 console.log(studyData.localId);
-	//                 dataLayer.deleteStudyByStudyId(studyData.localId)
-	//               }).then(function () {
-	//                 return dataLayer.getStudyDataFromServer(studyData);
-	//               }).then(function(insertData) {
-	//                 if(dataLayer.validateStudyData(insertData.jsonStudyData)) {
-	//                   dataLayer.insertStudy(insertData);
-	//                 };
-	//               })
-
-	//               );
-	// }
 
 	this.infoMessage = _displayInfoMessage;
 
