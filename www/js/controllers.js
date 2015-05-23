@@ -102,7 +102,7 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.testDatabaseAccess = function() {
-    devTest.testDataBase();
+    $scope.updateStudies();
 
 
   }
@@ -265,7 +265,7 @@ angular.module('tabete.controllers', [])
 
 })
 
-.controller('QuestiongroupCtrl', function($scope, $rootScope, $ionicPlatform, $ionicHistory, $stateParams, $ionicSideMenuDelegate, dataLayer) {
+.controller('QuestiongroupCtrl', function($scope, $rootScope, $ionicPlatform, $ionicHistory, $stateParams, $ionicSideMenuDelegate, dataLayer, studyServices) {
   //Disable Back Button 
   $ionicPlatform.registerBackButtonAction(function (event) {
                     event.preventDefault();
@@ -298,6 +298,48 @@ angular.module('tabete.controllers', [])
     console.log($scope.questions);
   })
 
+  $scope.moodmapValueChanged = function (questionId, moodIndex) {
+
+    var questionIndex = $scope.questions.map(function (e) {return e.id}).indexOf(questionId);
+    if ($scope.questions[questionIndex].moods[moodIndex].selectedintensity == "") {
+      $scope.questions[questionIndex].moods[moodIndex].intensities = studyServices.getIntensities();  
+    }
+    
+
+  }
+
+  $scope.moodmapIntensityChanged = function (questionId, moodIndex) {
+
+    var questionIndex = $scope.questions.map(function (e) {return e.id}).indexOf(questionId);
+    var ans = [];
+
+    for (var i = 0; i < $scope.questions[questionIndex].moods.length; i++) {
+      if ($scope.questions[questionIndex].moods[i].selectedmood !== "" && $scope.questions[questionIndex].moods[i].selectedmood !== "") {
+        ans.push($scope.questions[questionIndex].moods[i].selectedmood + ':' + $scope.questions[questionIndex].moods[i].selectedintensity);
+      }
+    };
+
+    $scope.questions[questionIndex].answer = ans.join(';');
+    console.log($scope.questions[questionIndex].answer);
+
+  }
+
+  $scope.multichoiceValueChanged = function(questionId) {
+    var multiChoiceValues = [];
+
+    var questionIndex = $scope.questions.map(function (e) { return e.id}).indexOf(questionId);
+
+    for (var i = 0; i < $scope.questions[questionIndex].questionoptions.length; i++) {
+      if ($scope.questions[questionIndex].questionoptions[i].checked) {
+        multiChoiceValues.push($scope.questions[questionIndex].questionoptions[i].value);
+      }
+    }
+
+    $scope.questions[questionIndex].answer = multiChoiceValues.join(';');
+    console.log($scope.questions[questionId].answer);
+  }
+
+  
 
 });
 

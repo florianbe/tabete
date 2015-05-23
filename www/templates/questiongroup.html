@@ -4,52 +4,141 @@
     <div class="row">
    		<div class="col text-center"><h4>{{questiongroup.name}}</h4></div>
 	</div>
-	 
-	 
-	 <div ng-repeat="question in questions">
-        <div ng-switch on="question.type">	
-  			<div ng-switch-when="BOOLEAN">
-  				<h4>{{question.text}}</h4>		
-  				<label class="item item-input item-stacked-label">
-	    			<ion-radio ng-model="question" ng-value="true">Ja</ion-radio>
-					<ion-radio ng-model="question" ng-value="false">Nein</ion-radio>
-				</label>
-  			</div>
-  			<div ng-switch-when="NUMERIC">
-  				<h4>{{question.text}}</h4>
-    			<label class="item item-input item-stacked-label">
-					<input type="tel" ng-model="question.answer">
-				</label>
-  			</div>
-  			<div ng-switch-when="SINGLECHOICE">
-    			<p>Singlechoice</p>
-  			</div>
-  			<div ng-switch-when="SLIDER">
-    			
-    			<div class="item range">
-  					<p>{{question.min | number:0}}</p>
-  						<input type="range" name="test" min="{{question.min | number:0}}" max="{{question.max | number:0}}" step="{{question.step | number:0}}">
-  					<p>{{question.max | number:0}}</p>
-				</div>
-  			</div>
-  			<div ng-switch-when="MULTICHOICE">
-    			<p>Multichoice</p>
-  			</div>
-  			<div ng-switch-when="MOODMAP">
-    			<p>Circumplex</p>
-  			</div>
-  			<div ng-switch-when="TEXT">
-				<label class="item item-input">
-					<span class="input-label">Username</span>
-				  	<input type="text">
-				</label>
-  			</div>
+	<form name="questionGroupForm" novalidate>
+			<div ng-repeat="question in questions" ng-class="" class="item">
+				<ng-form name="questionForm">
 
-		</div>     
-	</div>   
+					<div ng-switch on="question.type">
+			  			<div ng-switch-when="TEXT">
+			  				<label class="item item-input item-stacked-label item-text-wrap">
+			  					<span ="input-label">{{ question.text }}</span>
+			    				<input type="text" class="form-control" name="answer" ng-model="question.answer">
+			    			</label>
+			  			</div>
+
+			  			<div ng-switch-when="NUMERIC">
+			  				<label class="item item-input item-stacked-label item-text-wrap">
+			  					<span ="input-label">{{ question.text }}</span>
+			    				<input type="tel" class="form-control" name="answer" ng-model="question.answer">
+			    			</label>
+			  			</div>
+
+			  			<div ng-switch-when="BOOLEAN">
+			    			<label class="item item-input item-stacked-label item-text-wrap">
+			    				<span class="input-label">{{ question.text }} boolean {{ question.answer}} </span>
+			    			</label>	
+			    				<div class="list">
+					            	<ion-radio ng-repeat="option in question.questionoptions" ng-value="option.value" 
+					             ng-model="question.answer">{{ option.description }}</ion-radio>
+					        	</div>
+			  			</div>
+
+			  			<div ng-switch-when="SINGLECHOICE">
+			    			<label class="item item-input item-stacked-label item-select item-text-wrap">
+			    				<span class="input-label">{{ question.text }} singlechoice {{ question.answer}} </span>
+			    			
+				    			<select ng-model ="question.answer">	
+				    					<option ng-repeat="option in question.questionoptions" ng-value="option.value">
+				    						{{ option.description }}
+			    						</option>
+					        	</select>
+				        	</label>
+			  			</div>
+
+			  			<div ng-switch-when="MULTICHOICE">
+			    			<label class="item item-input item-stacked-label item-text-wrap">
+			    				<span class="input-label">{{ question.text }} multichoice {{ question.answer}} </span>
+			    			</label>
+			    				<div class="list">
+			    					<ion-checkbox ng-repeat="option in question.questionoptions" ng-model="option.checked" ng-checked="option.checked" ng-change="multichoiceValueChanged(question.id)">{{option.description + " " + option.checked }}
+			    					</ion-checkbox>
+			    				</div>
+			  			</div>
+
+			  			<div ng-switch-when="SLIDER">
+			  				<label class="item item-input item-stacked-label item-text-wrap">
+			  					<span class="input-label">{{ question.text }}</span>
+			    				<div class="range">
+			  						<p>{{question.min | number:0}}</p>
+			  							<input type="range" name="test" min="{{question.min | number:0}}" max="{{question.max | number:0}}" step="{{question.step | number:0}}" ng-model="question.answer">
+			  						<p>{{question.max | number:0}}</p>
+								</div>
+								<div class="row row-center">
+						    			<div class="col col-center">
+						    				Ausgewählter Wert: {{ question.answer }}
+						    			</div>
+						    		</div>
+							</label>
+						</div>
+						
+			  			<div ng-switch-when="MOODMAP">
+			    			
+			    			<label class="item item-input item-stacked-label item-text-wrap">
+			    				<span class="input-label">{{ question.text }} circumplex {{ question.answer}} </span>
+			    			</label>
+
+			    			<div class="list">
+				        	<label class="item item-input item-stacked-label item-select item-text-wrap">
+			    				<select ng-model ="question.moods[0].selectedmood" ng-change="moodmapValueChanged(question.id, 0)">	
+				    					<option ng-repeat="moodop in question.moods[0].moods" ng-value="moodop">
+				    						{{ moodop }}
+			    						</option>
+					        	</select>
+					        </label>
+					        <label class="item item-input item-stacked-label item-select item-text-wrap">
+					           	<select ng-model ="question.moods[0].selectedintensity" ng-change="moodmapIntensityChanged(question.id, 0)">	>	
+				    					<option ng-repeat="intensop in question.moods[0].intensities" ng-value="intensop">
+				    						{{ intensop }}
+			    						</option>
+					        	</select>
+				        	</label>
+				        	</div>
+				        	<div class="list">
+				        	<label class="item item-input item-stacked-label item-select item-text-wrap">
+					        	<select ng-model ="question.moods[1].selectedmood" ng-change="moodmapValueChanged(question.id, 1)">
+				    					<option ng-repeat="moodop in question.moods[1].moods" ng-value="moodop">
+				    						{{ moodop }}
+			    						</option>
+					        	</select>
+				        	</label>
+				        	<label class="item item-input item-stacked-label item-select item-text-wrap">
+					        	<select ng-model ="question.moods[1].selectedintensity" ng-change="moodmapIntensityChanged(question.id, 1)">		
+				    					<option ng-repeat="intensop in question.moods[1].intensities" ng-value="intensop">
+				    						{{ intensop }}
+			    						</option>
+					        	</select>
+				        	</label>
+				        	</div>
+				        	<div class="list">
+				        	<label class="item item-input item-stacked-label item-select item-text-wrap">
+					        	<select ng-model ="question.moods[2].selectedmood" ng-change="moodmapValueChanged(question.id, 2)">	
+				    					<option ng-repeat="moodop in question.moods[2].moods" ng-value="moodop">
+				    						{{ moodop }}
+			    						</option>
+					        	</select>
+				        	</label>
+				        	<label class="item item-input item-stacked-label item-select item-text-wrap">
+					        	<select ng-model ="question.moods[2].selectedintensity" ng-change="moodmapIntensityChanged(question.id, 2)">	
+				    					<option ng-repeat="intensop in question.moods[2].intensities" ng-value="intensop">
+				    						{{ intensop }}
+			    						</option>
+					        	</select>
+				        	</label>
+				        	</div>
+			  			</div>
+
+					</div>
+				</ng-form>
+			 	
+			</div>
+			<button class="button button-full button-positive" ng-click="nextQuestionGroup()">
+              Weiter
+            </button>
+	 </form>
 	  
   </ion-content>
   <ion-footer-bar class="bar-energized" ng-if="settings.testmode">
   	<h1 class="title">Testmodus</h1>
   </ion-footer-bar>
 </ion-view>
+

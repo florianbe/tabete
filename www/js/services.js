@@ -408,7 +408,7 @@ angular.module('tabete.services', ['ngCordova'])
                 		if (substudy.trigger === 'FIX' || substudy.trigger === 'FLEX') {
                 			_insertSignalPoints(sustu_id, substudy.trigger_signals);
                 		}
-                		_insertQuestionGroups(sustu_id, substudy.questiongroups);
+                		return _insertQuestionGroups(sustu_id, substudy.questiongroups);
 
                 	})
         		})
@@ -485,10 +485,7 @@ angular.module('tabete.services', ['ngCordova'])
 
 		// Wrapper function to insert Data from Study JSON object into Database
 		this.insertStudy = function(insertData) {
-			var defer = $q.defer();
-			var promises = [];
-			var substudies = [];
-
+			
 			// insertData = {};
 			// insertData.studyData = studyData;
 			// insertData.jsonStudyData = jsonStudyData
@@ -496,14 +493,12 @@ angular.module('tabete.services', ['ngCordova'])
 			_getServerId(insertData).then(function(insertData2) {
 				return _insertStudyData(insertData2);
 			}).then(function(insertData3) {
-				_insertSubStudyData(insertData3);			
+				return _insertSubStudyData(insertData3);			
 			}).then(function () {
 				return true;
 			})
 
-			$q.all(promises);
-
-			return defer;
+			
 		}
 
 		//Get all studies with substudies
@@ -721,11 +716,15 @@ angular.module('tabete.services', ['ngCordova'])
 
 		        		$cordovaSQLite.execute(db, query, [question.id]).then(function (res3) {
 		        			for (var j = 0; j < res3.rows.length; j++) {
-		        				question.questionoptions.push({
+		        				option = {
 		        					code: 			res3.rows.item(j).code,
 		        					description: 	res3.rows.item(j).description,
-		        					value: 			res3.rows.item(j).value,  
-		        				})
+		        					value: 			res3.rows.item(j).value
+		        				}
+		        				if (question.type ==='MULTICHOICE'){
+		        					option.checked = false;
+		        				}
+		        				question.questionoptions.push(option);
 		        			}
 
 		        		}, function (err) { 
@@ -735,6 +734,14 @@ angular.module('tabete.services', ['ngCordova'])
 		        		question.questionoptions = [];
 		        		question.questionoptions.push({code: 'YES', description: 'Ja', value: 'JA'});
 		        		question.questionoptions.push({code: 'NO', description: 'Nein', value: 'NEIN'});
+		        	} else if (question.type === 'SLIDER') {
+		        		question.answer = ((parseFloat(question.min) + parseFloat(question.max)) / 2);
+		        	} else if (question.type === 'MOODMAP') {
+		        		question.moods = [
+		        			{id: 1, 	selectedmood: '', 	selectedintensity: '', moods: _getMoods(),  intensities: [] },
+		        			{id: 2, 	selectedmood: '', 	selectedintensity: '', moods: _getMoods(),  intensities: [] },
+		        			{id: 3, 	selectedmood: '', 	selectedintensity: '', moods: _getMoods(),  intensities: [] }
+		        		];
 		        	}
 			    })
 
@@ -988,6 +995,41 @@ angular.module('tabete.services', ['ngCordova'])
 
     		return decodedData;
   		};
+
+  		var _shuffleArray = function (array) {
+  			var counter = array.length, temp, index;
+		    // While there are elements in the array
+		    while ( counter > 0 ) {
+		        // Pick a random index
+		        index = Math.floor( Math.random() * counter );
+		 
+		        // Decrease counter by 1
+		        counter--;
+		 
+		        // And swap the last element with it
+		        temp = array[ counter ];
+		        array[ counter ] = array[ index ];
+		        array[ index ] = temp;
+		    }
+		    return array;
+  		}
+  		
+  		_getMoods = function () {
+    		var moods = ['motiviert', 'zuversichtlich', 'zufrieden', 'ruhig', 'gelangweilt', 'unglücklich', 'gereizt', 'nervös'];
+
+    		return moods;
+    		
+    	}
+
+	    _getIntensities = function () {
+	    	var intensities = ['stark', 'mittel', 'niedrig'];
+
+	    	return intensities;
+	    }
+
+	    this.getMoods = _getMoods;
+	    this.getIntensities = _getIntensities;
+	    this.shuffleArray = _shuffleArray;
         
 		return self;
 	})
@@ -1131,76 +1173,12 @@ angular.module('tabete.services', ['ngCordova'])
 		})
 	}
 
-	this.synchronizeData2 = function (){
-		//Get all studies
-	    var deferred = $q.defer();
-	    var studyHandling = [];
+	this.getMoods = function () { return dataLayer.getMoods(); }
 
-	    var showLoadScreen = function () {
-	      //Show spinner
-	      $ionicLoading.show({
-	        template: '<p>Synchronisiert...</p><ion-spinner></ion-spinner>'
-	      });
-	    }
-
-	    var hideLoadScreen = function () {
-	      $ionicLoading.hide();
-	    }
-	    
-	    showLoadScreen();
-
-	    dataLayer.getStudies().then(function (studies) {
-	    //Clear old studies
-	      return dataLayer.deleteOldStudies(studies);
-	    }).then(function (studies_cleared) {
-	      $scope.updateStudies();
-	    //For all studies
-	      for (var i = 0; i < studies_cleared.length; i++) {
-	    //Check if remote version !== local version
-	        var studyData = {};
-	        dataLayer.compareStudyVersion(studies_cleared[i].id).then(function (compared_versions){
-	          if (compared_versions.local_data.version !== compared_versions.remote_data.version) {
-	            console.log('Study with id ' + compared_versions.local_data.studyId + ': Syncing Answers');
-	            studyHandling.push(dataLayer.postAnswersToServer(compared_versions));
-	          } else {
-	            console.log('Study with id ' + compared_versions.local_data.studyId + ': local and remote versions are different. Resyncing.');
-	            studyHandling.push(
-	              dataLayer.getStudyDataObject(compared_versions.local_data.studyId).then(function (studOb) { 
-	                studyData = studOb;
-	                console.log(studyData.localId);
-	                dataLayer.deleteStudyByStudyId(studyData.localId)
-	              }).then(function () {
-	                return dataLayer.getStudyDataFromServer(studyData);
-	              }).then(function(insertData) {
-	                if(dataLayer.validateStudyData(insertData.jsonStudyData)) {
-	                  dataLayer.insertStudy(insertData);
-	                };
-	              })
-
-	              );
-	          }
-	        })
-	        console.log(studies_cleared[i]);
-	      };
-	    }).then(function (res) {
-	      console.log('done');
-	      // $ionicLoading.hide();
-	    }).catch(function (err) {
-	      console.error(err);
-	      $ionicLoading.hide();
-	    });
-
-	    $q.all(studyHandling).then( function (done) {
-	      deferred.resolve();
-	      $ionicLoading.hide();
-
-	    }).catch(function (err) {
-	      console.error(err);
-	      $ionicLoading.hide();
-	    })
-	}
-
+	this.getIntensities = function () { return dataLayer.getIntensities(); }
 
 	return self;
 
 });
+
+
