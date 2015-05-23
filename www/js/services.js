@@ -731,6 +731,10 @@ angular.module('tabete.services', ['ngCordova'])
 		        		}, function (err) { 
 		        			console.error(err);
 		        		});
+		        	} else if (question.type === 'BOOLEAN') {
+		        		question.questionoptions = [];
+		        		question.questionoptions.push({code: 'YES', description: 'Ja', value: 'JA'});
+		        		question.questionoptions.push({code: 'NO', description: 'Nein', value: 'NEIN'});
 		        	}
 			    })
 

@@ -5,26 +5,32 @@
    		<div class="col text-center"><h4>{{questiongroup.name}}</h4></div>
 	</div>
 	 
-	 <ul class="list">
+	 
 	 <div ng-repeat="question in questions">
-        <div ng-switch on="question.type">
+        <div ng-switch on="question.type">	
   			<div ng-switch-when="BOOLEAN">
+  				<h4>{{question.text}}</h4>		
   				<label class="item item-input item-stacked-label">
-	    			<span class="input-label">{{question.text}}</span>
 	    			<ion-radio ng-model="question" ng-value="true">Ja</ion-radio>
 					<ion-radio ng-model="question" ng-value="false">Nein</ion-radio>
 				</label>
   			</div>
   			<div ng-switch-when="NUMERIC">
+  				<h4>{{question.text}}</h4>
     			<label class="item item-input item-stacked-label">
-    				<span class="input-label">{{question.text}}</span>
-    			</label>
+					<input type="tel" ng-model="question.answer">
+				</label>
   			</div>
   			<div ng-switch-when="SINGLECHOICE">
     			<p>Singlechoice</p>
   			</div>
   			<div ng-switch-when="SLIDER">
-    			<p>Slider</p>
+    			
+    			<div class="item range">
+  					<p>{{question.min | number:0}}</p>
+  						<input type="range" name="test" min="{{question.min | number:0}}" max="{{question.max | number:0}}" step="{{question.step | number:0}}">
+  					<p>{{question.max | number:0}}</p>
+				</div>
   			</div>
   			<div ng-switch-when="MULTICHOICE">
     			<p>Multichoice</p>
@@ -38,9 +44,10 @@
 				  	<input type="text">
 				</label>
   			</div>
-		</div>        
-      </div>
-      </ul>
+
+		</div>     
+	</div>   
+	  
   </ion-content>
   <ion-footer-bar class="bar-energized" ng-if="settings.testmode">
   	<h1 class="title">Testmodus</h1>

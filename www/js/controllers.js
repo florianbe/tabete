@@ -265,13 +265,19 @@ angular.module('tabete.controllers', [])
 
 })
 
-.controller('QuestiongroupCtrl', function($scope, $ionicPlatform, $stateParams, $ionicSideMenuDelegate, dataLayer) {
+.controller('QuestiongroupCtrl', function($scope, $rootScope, $ionicPlatform, $ionicHistory, $stateParams, $ionicSideMenuDelegate, dataLayer) {
   //Disable Back Button 
   $ionicPlatform.registerBackButtonAction(function (event) {
                     event.preventDefault();
             }, 100);
   //Disable Side Menu
-  $scope.allowSideMenu = false;
+  $scope.$on('$ionicView.beforeEnter', function (e, data) { 
+    $rootScope.enableLeftSideMenu = false;
+  });
+  
+  $scope.$on('$ionicView.beforeLeave', function (e, data) { 
+    $rootScope.enableLeftSideMenu = true;
+  });  
   
   $scope.questiongroup = {};
   $scope.questions = [];
