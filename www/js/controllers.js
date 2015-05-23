@@ -339,6 +339,17 @@ angular.module('tabete.controllers', [])
     console.log($scope.questions[questionId].answer);
   }
 
+  $scope.nextQuestionGroup = function() {
+    if (studyServices.validateQuestionGroup($scope.questions)) {
+      console.log('valid');
+    } else {
+      console.log('invalid');
+      $scope.questions = questions;
+    }
+
+    console.log($scope.questions);
+  }
+
   
 
 });

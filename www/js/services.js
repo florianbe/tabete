@@ -690,6 +690,8 @@ angular.module('tabete.services', ['ngCordova'])
         			question.type =			res.rows.item(i).type;
         			question.mandatory = 	res.rows.item(i).mandatory === 1 ? true : false;
         			question.answer = 		null;
+        			question.valid  =		true; 
+        			question.error_message = 	"";
         			if (res.rows.item(i).min !== 'NO') {
         				question.min = 	res.rows.item(i).min;
         			}
@@ -1171,6 +1173,52 @@ angular.module('tabete.services', ['ngCordova'])
 		}).catch(function (err) {
 			console.log(err);
 		})
+	}
+
+	this.validateQuestionGroup = function (questions) {
+
+
+		qgroup_valid = true;
+
+		for (var i = 0; i < questions.length; i++) {
+			questions[i].valid = true;
+			questions[i].error_message = "";
+			if (questions[i].mandatory && (questions[i].answer === null || questions[i].answer === "")) {
+				questions[i].valid = false;
+				qgroup_valid = false;
+				questions[i].error_message += "Dies ist eine Pflichtfrage.";
+			}
+
+			if (questions[i].type === "NUMERIC" && (questions[i].min !== "NO" || questions[i].max !=="NO")) {
+				if (questions[i].min !== "NO" && questions[i].max === "NO" && parseFloat(questions[i].answer) < parseFloat(questions[i].min)) {
+					questions[i].valid = false;
+					qgroup_valid = false;
+					questions[i].error_message += "Bitte geben Sie einen Wert der größer als " + questions[i].min + " ist ein.";		
+				} else if (questions[i].min === "NO" && questions[i].max !== "NO" && parseFloat(questions[i].answer) > parseFloat(questions[i].max)) {
+					questions[i].valid = false;
+					qgroup_valid = false;
+					questions[i].error_message += "Bitte geben Sie einen Wert der kleiner als " + questions[i].max + " ist ein.";
+				} else if (questions[i].min !== "NO" && questions[i].max !== "NO" && (parseFloat(questions[i].answer) < parseFloat(questions[i].min) || parseFloat(questions[i].answer) > parseFloat(questions[i].max))) {
+					questions[i].valid = false;
+					qgroup_valid = false;
+					questions[i].error_message += "Bitte geben Sie einen Wert zwischen " + questions[i].min + " und " + questions[i].max + " ein.";
+				} 
+			}
+
+			if (questions[i].type === "MULTICHOICE") {
+
+				var mc_answers = questions[i].answer == null ? [] : questions[i].answer.split(';');
+				
+				if (mc_answers.length < parseInt(questions[i].min) || mc_answers.length > parseInt(questions[i].max)) {
+					questions[i].valid = false;
+					qgroup_valid = false;
+					questions[i].error_message += "Bitte wählen Sie zwischen " + parseInt(questions[i].min) + " und " + parseInt(questions[i].max) + " Elementen aus.";
+				}
+			}
+		};
+
+		return questions;
+
 	}
 
 	this.getMoods = function () { return dataLayer.getMoods(); }
