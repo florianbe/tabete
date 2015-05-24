@@ -22,8 +22,9 @@ width: 100%;
 position: relative;
 }
 
-.item-error {
-	border: solid red;
+.errormessage {
+	border-color: #e42012;
+  	background-color: #ef473a;
 }
 
 

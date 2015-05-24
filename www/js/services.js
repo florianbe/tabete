@@ -408,8 +408,9 @@ angular.module('tabete.services', ['ngCordova'])
                 		if (substudy.trigger === 'FIX' || substudy.trigger === 'FLEX') {
                 			_insertSignalPoints(sustu_id, substudy.trigger_signals);
                 		}
-                		return _insertQuestionGroups(sustu_id, substudy.questiongroups);
-
+                		_insertQuestionGroups(sustu_id, substudy.questiongroups);
+                		console.log('in the inserter');
+                		return true;
                 	})
         		})
             });
@@ -427,9 +428,9 @@ angular.module('tabete.services', ['ngCordova'])
 		var _insertQuestionGroups = function (substudy_id, questiongroups) {
 			angular.forEach(questiongroups, function (questiongroup) {
 				var query ="INSERT INTO questiongroups (version, substudy_id, name, sequence_id, randomorder) VALUES (?, ?, ?, ?, ?)";
-				$cordovaSQLite.execute(db, query, [questiongroup.version, substudy_id, questiongroup.name, questiongroup.seq_id, questiongroup.randomorder === true ? 1 : 0]).then(function (res) {
+				return $cordovaSQLite.execute(db, query, [questiongroup.version, substudy_id, questiongroup.name, questiongroup.seq_id, questiongroup.randomorder === true ? 1 : 0]).then(function (res) {
 					var query_select = "SELECT id FROM questiongroups WHERE substudy_id = ? AND sequence_id = ?";
-					$cordovaSQLite.execute(db, query_select, [substudy_id, questiongroup.seq_id]).then(function (res2) {
+					return $cordovaSQLite.execute(db, query_select, [substudy_id, questiongroup.seq_id]).then(function (res2) {
 						var qg_id = res2.rows.item(0).id;
 						_insertQuestions(qg_id, questiongroup.questions);
 						
@@ -449,7 +450,7 @@ angular.module('tabete.services', ['ngCordova'])
 		var _insertRules = function (questiongroup_id, rules) {
 			angular.forEach(rules, function (rule) {
 				var query="SELECT q.id FROM questions q INNER JOIN questiongroups qg ON q.questiongroup_id = qg.id WHERE q.remote_id = ? AND qg.substudy_id IN (SELECT substudy_id FROM questiongroups WHERE id = ?)";
-				$cordovaSQLite.execute(db, query, [rule.question_id, questiongroup_id]).then(function (res) {
+				return $cordovaSQLite.execute(db, query, [rule.question_id, questiongroup_id]).then(function (res) {
 					qId = res.rows.item(0).id;
 					var query="INSERT INTO rules (questiongroup_id, question_id, answer_value) VALUES (?, ?, ?)";	
 					$cordovaSQLite.execute(db, query, [questiongroup_id, qId, rule.answer_value]);
@@ -463,12 +464,12 @@ angular.module('tabete.services', ['ngCordova'])
 		var _insertQuestions = function (questiongroup_id, questions) {
 			angular.forEach(questions, function (question) {
 				var query="INSERT INTO questions (remote_id, version, questiongroup_id, sequence_id, type, 	mandatory, text, min, max, step) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-				$cordovaSQLite.execute(db, query, [question.id, question.version, questiongroup_id, question.seq_id, question.type, question.mandatory === true ? 1 : 0, question.text, question.min === false ? 'NO' : question.min, question.max === false ? 'NO' : question.max, question.step === false ? 'NO' : question.step]).then(function (res) {
+				return $cordovaSQLite.execute(db, query, [question.id, question.version, questiongroup_id, question.seq_id, question.type, question.mandatory === true ? 1 : 0, question.text, question.min === false ? 'NO' : question.min, question.max === false ? 'NO' : question.max, question.step === false ? 'NO' : question.step]).then(function (res) {
 					if (question.type === 'SINGLECHOICE' || question.type === 'MULTICHOICE') {
 						var query_select = "SELECT id FROM questions WHERE remote_id = ? AND questiongroup_id = ?";
-						$cordovaSQLite.execute(db, query_select, [question.id, questiongroup_id]).then(function (res2) {
+						return $cordovaSQLite.execute(db, query_select, [question.id, questiongroup_id]).then(function (res2) {
 							var q_id = res2.rows.item(0).id;
-							_insertQuestionOptions(q_id, question.options);
+							return _insertQuestionOptions(q_id, question.options);
 						})
 					}
 				})		
@@ -479,7 +480,7 @@ angular.module('tabete.services', ['ngCordova'])
 		var _insertQuestionOptions = function (q_id, options) {
 			angular.forEach(options, function (option) {
 				var query = "INSERT INTO questionoptions (question_id, code, description, value) VALUES (?, ?, ?, ?)";
-				$cordovaSQLite.execute(db, query, [q_id, option.code, option.description, option.value]);
+				return $cordovaSQLite.execute(db, query, [q_id, option.code, option.description, option.value]);
 			})
 		}
 
@@ -495,7 +496,7 @@ angular.module('tabete.services', ['ngCordova'])
 			}).then(function(insertData3) {
 				return _insertSubStudyData(insertData3);			
 			}).then(function () {
-				return true;
+				return 'test insertStudy';
 			})
 
 			
@@ -643,12 +644,14 @@ angular.module('tabete.services', ['ngCordova'])
         }
 
         this.getQuestiongroup = function(questiongroupId) {
-        	var query = "SELECT name, randomorder FROM questiongroups WHERE id = ?";
+        	var query = "SELECT name, randomorder, substudy_id FROM questiongroups WHERE id = ?";
         	return $cordovaSQLite.execute(db, query, [questiongroupId]).then(function (res) {
         		questiongroupData = {
         			id: 			questiongroupId,
         			name: 			res.rows.item(0).name,
-        			randomorder: 	res.rows.item(0).randomorder === 1 ? true : false
+        			randomorder: 	res.rows.item(0).randomorder === 1 ? true : false,
+        			substudy_id: 	res.rows.item(0).substudy_id,
+        			is_valid: 		true 
         		}
         	return questiongroupData;
         	}, function (err) {
@@ -1029,12 +1032,15 @@ angular.module('tabete.services', ['ngCordova'])
 	    	return intensities;
 	    }
 
+
+	    this.getAnswerObject = function (substudyId) { return _getAnswerObject(substudyId); }
 	    this.getMoods = _getMoods;
 	    this.getIntensities = _getIntensities;
 	    this.shuffleArray = _shuffleArray;
         
 		return self;
 	})
+
 .factory('studyServices', function($ionicPlatform, $ionicLoading, $ionicModal, $q, $ionicPopup, $localstorage, $cordovaBarcodeScanner, $http, dataLayer, devTest, $cordovaLocalNotification) {
 
 	var self = this;
@@ -1215,15 +1221,52 @@ angular.module('tabete.services', ['ngCordova'])
 					questions[i].error_message += "Bitte wählen Sie zwischen " + parseInt(questions[i].min) + " und " + parseInt(questions[i].max) + " Elementen aus.";
 				}
 			}
+
+			if (questions[i].type === "MOODMAP") {
+				var sel_moods = [];
+				var single_value_error = false;
+
+				for (var j = 0; j < questions[i].moods.length; j++) {
+					if (((questions[i].moods[j].selectedmood == "" && questions[i].moods[j].selectedintensity != "") || (questions[i].moods[j].selectedmood != "" && questions[i].moods[j].selectedintensity == "")) && !single_value_error) {
+						single_value_error = true;
+						questions[i].error_message += "Es müssen immer eine Emotion und eine Ausprägung gemeinsam gewählt werden.";
+						questions[i].valid = false;
+					}
+					if (questions[i].moods[j].selectedmood != "") {
+						sel_moods.push(questions[i].moods[j].selectedmood);
+					}
+				};
+
+				dupes:
+				for (var j = 0; j < sel_moods.length; j++) {
+					for (var k = 0; k < sel_moods.length; k++) {
+						if (sel_moods[k] == sel_moods[j]) {
+							questions[i].valid = false;
+							questions[i].error_message += "Der Wert " + sel_moods[k] + " wurde mehrfach gewählt.";
+							break dupes;
+						}
+					};
+				};
+
+			}
 		};
 
 		return questions;
 
 	}
 
+	this.getQuestiongroup = function (questiongroupId) { return dataLayer.getQuestiongroup(questiongroupId); }
+
+	this.getQuestionsByQuestiongroupId = function (questiongroupId) { return dataLayer.getQuestionsByQuestiongroupId(questiongroupId); }
+
 	this.getMoods = function () { return dataLayer.getMoods(); }
 
 	this.getIntensities = function () { return dataLayer.getIntensities(); }
+
+	this.shuffleArray = function (array) { return dataLayer.shuffleArray(array); }
+
+	this.getAnswerObject = function (substudyId) { return dataLayer.getAnswerObject; }
+
 
 	return self;
 

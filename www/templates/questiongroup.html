@@ -129,14 +129,19 @@
 				        	</div>
 			  			</div>
 
-			  			<div ng-hide="question.valid" class="item bar bar-assertive">
+			  			<div ng-hide="question.valid" class="item errormessage item-text-wrap">
   							<h2>{{question.error_message}}</h2>
 						</div>	
 
 					</div>
 				</ng-form>
+
 			 	
 			</div>
+			<div ng-hide="questiongroup.is_valid" class="item errormessage item-text-wrap">
+				<h2>Ihre Angaben konnten nicht gespeichert werden. Bitte passen Sie diese entsprechend der oben genannten Fehlermeldungen an.</h2>
+			</div>	
+
 			<button class="button button-full button-positive" >
               Weiter
             </button>

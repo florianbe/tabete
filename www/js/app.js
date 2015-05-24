@@ -76,6 +76,14 @@ angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', '
       'menuContent': {
         templateUrl: "templates/questiongroup.html",
         controller: 'QuestiongroupCtrl',
+        // resolve: {
+        //   question_group: function(studyServices) {
+        //     return studyServices.getQuestiongroup($stateParams.questiongroupId);
+        //   },
+        //   questions: function(studyServices) {
+        //     return studyServices.getQuestionsByQuestiongroupId($stateParams.questiongroupId);
+        //   }
+        // }
       }
     }
   });

@@ -68,7 +68,7 @@ angular.module('tabete.controllers', [])
   };
 })
 
-.controller('StudiesCtrl', function($scope, $state, $ionicPlatform, studyServices, $ionicLoading, $ionicModal, $q, $ionicPopup, $localstorage, $cordovaBarcodeScanner, $http, dataLayer, devTest, $cordovaLocalNotification, $rootScope) {
+.controller('StudiesCtrl', function($scope, $state, $ionicPlatform, studyServices, $ionicLoading, $ionicModal, $q, $ionicPopup, $localstorage, $cordovaBarcodeScanner, $http, dataLayer, devTest, $cordovaLocalNotification, $rootScope, $timeout) {
 // DEVTEST Data
   $scope.t_studies = [
     { title: 'Zeitverwendung im Studienalltag', id: 1 },
@@ -218,10 +218,12 @@ angular.module('tabete.controllers', [])
   $scope.addNewStudy = function () {
     if ($scope.newStudyInput.studyServer != undefined && $scope.newStudyInput.studyServer != "" && $scope.newStudyInput.studyName != undefined && $scope.newStudyInput.studyName != "" && $scope.newStudyInput.studyPassword!= undefined && $scope.newStudyInput.studyPassword != "") {
           studyServices.importNewStudy($scope.newStudyInput).then(function (res) {
+            $timeout(function() {
               $scope.updateStudies();
-              $scope.closeNewStudy();        
+              $scope.closeNewStudy(); 
+              }, 1000);
           });
-    } 
+    }
   }
 
   //Synchronize all Data on Device
@@ -282,20 +284,25 @@ angular.module('tabete.controllers', [])
   $scope.questiongroup = {};
   $scope.questions = [];
 
+  // $scope.questiongroup = question_group;
+  // $scope.questions = questions;
+
   console.log("Starting questiongroup: " + $stateParams.questiongroupId);
 
-  dataLayer.getQuestiongroup($stateParams.questiongroupId).then(function (res) {
+  studyServices.getQuestiongroup($stateParams.questiongroupId).then(function (res) {
     $scope.questiongroup = res;
+    // console.log($scope.questiongroup);
     return res.id;
-  }, function (err) {
-    console.error(err);
   }).then(function (qgId) {
-    return dataLayer.getQuestionsByQuestiongroupId(qgId);
-  }, function (err) {
-    console.erro(err);
+    return studyServices.getQuestionsByQuestiongroupId(qgId);
   }).then(function (qs) {
+    if ($scope.questiongroup.randomorder) {
+      qs = studyServices.shuffleArray(qs);  
+    }
     $scope.questions = qs;
     console.log($scope.questions);
+  }).catch(function (err) {
+    console.error(err);
   })
 
   $scope.moodmapValueChanged = function (questionId, moodIndex) {
@@ -340,11 +347,33 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.nextQuestionGroup = function() {
-    if (studyServices.validateQuestionGroup($scope.questions)) {
-      console.log('valid');
+    
+    $scope.questiongroup.is_valid = true;
+
+    $scope.questions = studyServices.validateQuestionGroup($scope.questions);
+
+    for (var i = 0; i < $scope.questions.length; i++) {
+      if (!($scope.questions[i].valid)) {
+        $scope.questiongroup.is_valid = false;
+        break;
+      }
+    }
+
+    if($scope.questiongroup.is_valid) {
+      console.log('Data was valid, get next questiongroup');
+      //Get Answer object
+      var answerObject  = studyServices.getAnswerObject($scope.questiongroup.substudy_id);
+      console.log(answerObject);
+      //Save Answers to answer object & DB
+
+      //Get next QG-ID
+
+      //If -1 --> end study, try to sync it up
+
+      //Else: load next questiongroup
+
     } else {
-      console.log('invalid');
-      $scope.questions = questions;
+      console.log('nope, there were errors');
     }
 
     console.log($scope.questions);
