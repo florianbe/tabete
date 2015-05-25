@@ -267,7 +267,7 @@ angular.module('tabete.controllers', [])
 
 })
 
-.controller('QuestiongroupCtrl', function($scope, $rootScope, $ionicPlatform, $ionicHistory, $stateParams, $ionicSideMenuDelegate, dataLayer, studyServices) {
+.controller('QuestiongroupCtrl', function($scope, $rootScope, $state, $ionicPlatform, $ionicHistory, $ionicLoading, $stateParams, $ionicSideMenuDelegate, $cordovaNetwork, $timeout, dataLayer, studyServices) {
   //Disable Back Button 
   $ionicPlatform.registerBackButtonAction(function (event) {
                     event.preventDefault();
@@ -364,19 +364,61 @@ angular.module('tabete.controllers', [])
       //Get Answer object
       var answerObject  = studyServices.getAnswerObject($scope.questiongroup.substudy_id);
       console.log(answerObject);
-      //Save Answers to answer object & DB
 
-      //Get next QG-ID
+      var hasNetwork = false;
 
-      //If -1 --> end study, try to sync it up
+      if(window.cordova) {
+        hasNetwork = ($cordovaNetwork.isOnline() && ($cordovaNetwork.getNetwork() == 'wifi' || $cordovaNetwork.getNetwork() == 'ethernet' ||$cordovaNetwork.getNetwork() == 'unknown')) ? true : false;
+        console.log($cordovaNetwork.getNetwork());
+      } else {
+        hasNetwork =true;
+      }
+      
+      var answerTime = Date.now();
+      
+      //Save data in answer object & database
+      for (var i = 0; i < $scope.questions.length; i++) {
+        var answer = {
+          question_id:  $scope.questions[i].id,
+          answer:       $scope.questions[i].answer
+        }
+        answerObject.answers.push(answer);
+        studyServices.saveAnswer(answer, $scope.settings.testmode, answerObject.signaltime, answerTime);
+      };
 
-      //Else: load next questiongroup
+      //Save answer object
+      studyServices.setAnswerObject(answerObject, $scope.questiongroup.substudy_id);
+      
+      studyServices.getNextQuestiongroup($scope.questiongroup.id).then(function (nextQuestionGroup) {
+        console.log('current id is ' + $scope.questiongroup.id);
+        console.log('Next Questiongroup is ' + nextQuestionGroup);
+        if (nextQuestionGroup != -1) {
+
+          //Go To Next Questiongroup
+          $state.go('app.questiongroup', {'questiongroupId': nextQuestionGroup});
+
+        } else {
+          if (hasNetwork) {
+            studyServices.finishSubstudy($scope.questiongroup.substudy_id);
+            studyServices.synchronizeDataAsync();  
+          }
+
+          $ionicLoading.show({
+            template: '<p>Erfassung abgeschlossen</p>'
+          });
+
+          $timeout(function() {
+              $ionicLoading.hide();
+          }, 2000);
+
+          //GO To Homescreen
+          $state.go('app.studies');
+        } 
+      })
 
     } else {
       console.log('nope, there were errors');
     }
-
-    console.log($scope.questions);
   }
 
   

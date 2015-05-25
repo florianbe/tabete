@@ -830,22 +830,37 @@ angular.module('tabete.services', ['ngCordova'])
         		dataset = {};
         		dataset.substudy_id = sustuId;
         		return _getQuestionGroupsBySubstudyId(dataset);	
+        	}).then(function (dataset_filled) {
+        		return dataset_filled;
+        	}).then(function (dataset_filled) {
+        		return _getRulesBySubstudyId(dataset_filled);
         	}).then(function (dataset_qg) {
-        		return dataset_qg;
-        	}).then(function (dataset_qg) {
-        		return _getRulesBySubstudyId(dataset_qg);
-        	}).then(function (dataset_qg) {
+
         		var nextQuestiongroupId = -1;
         		var answerObject = _getAnswerObject(dataset_qg.substudy_id);
-
-        		// console.log(answerObject);
+				var nextQgIndex = 0;
+        		// console.log(questiongroupId);
         		// console.log(dataset_qg.questiongroups);
         		// console.log("QG ID " + questiongroupId);
 
-        		var nextQgIndex = dataset_qg.questiongroups.map(function (e) { return e.id}).indexOf(questiongroupId) + 1;
-        		
+
+        		for (var i = 0; i < dataset_qg.questiongroups.length; i++) {
+        			console.log("comparing " + dataset_qg.questiongroups[i].id + " with " + questiongroupId);
+
+        			if (dataset_qg.questiongroups[i].id == questiongroupId) {
+        				nextQgIndex = i + 1;
+        				console.log("found questiongroupId " + i);
+        				break;
+        			}
+        		}
+
+        		// var nextQgIndex = (dataset_qg.questiongroups.map(function (e) { return e.id}).indexOf(questiongroupId) + 1);
         		// console.log("QG Index " + nextQgIndex);
         		
+        		if (dataset_qg.questiongroups.length == nextQgIndex) {
+        			return -1;
+        		}
+
         		for (var i = nextQgIndex; i < dataset_qg.questiongroups.length; i++) {
         			if (dataset_qg.questiongroups[i].rules.length > 0) {
         				var ruleIsMet = false;
@@ -890,19 +905,19 @@ angular.module('tabete.services', ['ngCordova'])
         	})
         }
      		        
-        this.saveAnswers = function (jsonAnswerData, substudyId, inTestMode) {
+        this.saveAnswer = function (answerData, inTestMode, signalDate, answerDate) {
         	var query = "INSERT INTO answers (question_id, answer, testanswer, answer_date, signal_date) VALUES (?, ?, ?, ?, ?)";
         	//Get answer object for signal_date
 
-
-        	//Iterate over answer data
-        	$cordovaSQLite.execute(db, query, [studyId]);
+        	$cordovaSQLite.execute(db, query, [answerData.question_id, answerData.answer, inTestMode ? 1 : 0, answerDate, signalDate]).then(function (res) {
+        		console.log('answer saved: ' + answerData.question_id);
+        	}).catch( function (err) {
+        		console.error(err);
+        	});
         }
 
-        this.finishSubstudy = function (questiongroupId) {
-			_getSubstudyIdByQuestiongroupId(questiongroupId).then(function (sustuId) {
-        		_setAnswerObject(null, sustuId);
-        	});
+        this.finishSubstudy = function (substudyId) {
+			_setAnswerObject(null, substudyId);
 		}
 
 		//Delete study with given id
@@ -1034,6 +1049,7 @@ angular.module('tabete.services', ['ngCordova'])
 
 
 	    this.getAnswerObject = function (substudyId) { return _getAnswerObject(substudyId); }
+	    this.setAnswerObject = function (answerObject, substudyId) { _setAnswerObject(answerObject, substudyId); }
 	    this.getMoods = _getMoods;
 	    this.getIntensities = _getIntensities;
 	    this.shuffleArray = _shuffleArray;
@@ -1240,7 +1256,7 @@ angular.module('tabete.services', ['ngCordova'])
 				dupes:
 				for (var j = 0; j < sel_moods.length; j++) {
 					for (var k = 0; k < sel_moods.length; k++) {
-						if (sel_moods[k] == sel_moods[j]) {
+						if (sel_moods[k] == sel_moods[j] && k !== j) {
 							questions[i].valid = false;
 							questions[i].error_message += "Der Wert " + sel_moods[k] + " wurde mehrfach gewählt.";
 							break dupes;
@@ -1265,8 +1281,37 @@ angular.module('tabete.services', ['ngCordova'])
 
 	this.shuffleArray = function (array) { return dataLayer.shuffleArray(array); }
 
-	this.getAnswerObject = function (substudyId) { return dataLayer.getAnswerObject; }
+	this.getAnswerObject = function (substudyId) { return dataLayer.getAnswerObject(substudyId); }
 
+	this.setAnswerObject = function (answerObject, substudyId) { dataLayer.setAnswerObject(answerObject, substudyId); }
+
+	this.getNextQuestiongroup = function (questiongroupId) { return dataLayer.getNextQuestiongroup(questiongroupId); }
+
+	this.saveAnswer = function (answerData, inTestMode, signalDate, answerDate) { dataLayer.saveAnswer(answerData, inTestMode, signalDate, answerDate); }
+
+	this.finishSubstudy = function (substudyId) { dataLayer.finishSubstudy(substudyId); }
+
+	//Synchronizes all data on device with the corresponding servers
+    this.synchronizeDataAsync = function () {
+    	var deferred = $q.defer();
+    	var studyHandling = [];
+
+    	return dataLayer.getStudies().then(function (studies) {
+    		return dataLayer.deleteOldStudies(studies);
+    	}).then(function (currentStudies) {
+    		for (var i = 0; i < currentStudies.length; i++) {
+    			studyHandling.push(_syncStudy(currentStudies[i]));
+    		}
+    		return $q.all(studyHandling);
+    	}).then(function (results) {
+    		console.log(results);
+
+    		return results;
+    	}).catch(function (err) {
+
+    		console.error(err);
+    	})
+    }
 
 	return self;
 
