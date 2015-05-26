@@ -37,7 +37,7 @@ angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', '
         //SIGNAL POINTS
         $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS signalpoints (id integer primary key, substudy_id integer, signal_date text)");
         //QUESTION GROUPS
-        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questiongroups (id integer primary key, version integer, substudy_id integer, name text, sequence_id integer, randomorder integer)");
+        $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questiongroups (id integer primary key, version integer, substudy_id integer, name text, description text, sequence_id integer, randomorder integer)");
         //RULES
         $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS rules (id integer primary key, questiongroup_id integer, question_id integer, answer_value text)");
         //QUESTIONS
@@ -68,6 +68,16 @@ angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', '
         }
       }
     })
+
+  .state('app.delete', {
+      url: "/delete", 
+      views: {
+        'menuContent': {
+          templateUrl: "templates/delete.html", 
+          controller: 'DeleteCtrl'
+        }
+      }
+  })
 
   .state('app.questiongroup', {
     cache: false,

@@ -5,12 +5,6 @@
       </button>
     </ion-nav-buttons>
   <ion-content ng-class="{'has-footer': settings.testmode}">
-    <ion-list>
-      <ion-item ng-repeat="study in t_studies" href="#app/substudy/{{t_study.id}}">
-        {{study.title}}
-      </ion-item>
-    </ion-list>
-    <h2>Real Data</h2>
     <ion-list show-delete="false" can-swipe="true">
       <ion-item ng-repeat="substudy in substudies" ng-show="settings.testmode || substudy.triggertype === 'EVENT'" ng-click="loadSubstudy(substudy.substudy_id)">
         {{ substudy.substudy_title }}

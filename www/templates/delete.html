@@ -1,13 +1,11 @@
 <ion-view view-title="Studien löschen">
   <ion-content ng-class="{'has-footer': settings.testmode}">
-    <ion-list show-delete="false" can-swipe="true">
-      <ion-item ng-repeat="study in studies" ng-click="deleteStudy(study.study_id)">
-        {{ substudy.substudy_title }}
-      </ion-item>
-      <ion-item ng-hide="hasStudies">
-        Es konnten keine Studien gefunden werden
-      </ion-item>
-    </ion-list>
+    <div class="list">
+      <a ng-repeat="study in studies" class="item item-icon-left" ng-click="deleteStudy(study.study_id)">
+        <i class="icon ion-trash-b"></i>
+        {{ study.study_name}}
+      </a>
+    </div>
   </ion-content>
   <ion-footer-bar class="bar-energized" ng-if="settings.testmode">
   	<h1 class="title">Testmodus</h1>

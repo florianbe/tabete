@@ -3,6 +3,10 @@
   <ion-content ng-class="{'has-footer': settings.testmode}">
     <div class="row">
    		<div class="col text-center"><h4>{{questiongroup.name}}</h4></div>
+   		
+	</div>
+	<div class="row text-wrap">
+	<p>{{questiongroup.description}}</p>
 	</div> 
 	<form name="questionGroupForm" novalidate ng-submit="nextQuestionGroup()">
 			<div ng-repeat="question in questions"  class="item">

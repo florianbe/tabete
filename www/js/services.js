@@ -44,7 +44,7 @@ angular.module('tabete.services', ['ngCordova'])
 		    //SIGNAL POINTS
 		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS signalpoints (id integer primary key, substudy_id integer, signal_date text)");
 		    //QUESTION GROUPS
-		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questiongroups (id integer primary key, version integer, substudy_id integer, name text, sequence_id integer, randomorder integer)");
+		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS questiongroups (id integer primary key, version integer, substudy_id integer, name text, description text, sequence_id integer, randomorder integer)");
 		    //RULES
 		    $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS rules (id integer primary key, questiongroup_id integer, question_id integer, answer_value text)");
 		    //QUESTIONS
@@ -247,7 +247,7 @@ angular.module('tabete.services', ['ngCordova'])
 				local_data: 	{ studyId: localData.id }
 			};
 
-			var query = "SELECT studies.password AS password, studies.remote_id AS remote_id, studies.version AS version, servers.url AS url FROM studies INNER JOIN servers ON studies.server_id = servers.id WHERE studies.id = ?";
+			var query = "SELECT studies.password AS password, studies.remote_id AS remote_id, studies.version AS version, servers.url AS url, servers.subject_id AS subject_id FROM studies INNER JOIN servers ON studies.server_id = servers.id WHERE studies.id = ?";
 			return $cordovaSQLite.execute(db, query, [comparator.local_data.studyId]).then(function(res) {
 
 				if (res.rows.length > 0) {
@@ -255,6 +255,7 @@ angular.module('tabete.services', ['ngCordova'])
 						studyServer:	res.rows.item(0).url,
 						studyId: 		res.rows.item(0).remote_id,
 						studyPassword: 	res.rows.item(0).password,
+						subjectId: 		res.rows.item(0).subject_id
 					}
 					comparator.local_data.version = res.rows.item(0).version;
 
@@ -309,7 +310,64 @@ angular.module('tabete.services', ['ngCordova'])
 
 		this.postAnswersToServer = function(studyData) {
 			console.log('postAnswersToServer: to be done');
+			console.log(studyData);
+
+			var query = "SELECT a.answer, a.testanswer, a.signal_date, a.answer_date, q.remote_id FROM answers a INNER JOIN questions q ON a.question_id = q.id INNER JOIN questiongroups qg ON q.questiongroup_id = qg.id INNER JOIN substudies ss ON qg.substudy_id = ss.id WHERE ss.study_id = ?";
+			return $cordovaSQLite.execute(db, query, [studyData.local_data.studyId]).then( function(res) {
+				answer_data = {};
+				answer_data.subjectId = studyData.remote_data.subjectId;
+				answer_data.studyId = 	studyData.remote_data.studyId;
+				answer_data.answers = [];
+				console.log(res);
+				for (var i = 0; i < res.rows.length; i++) {
+					answer = {};
+					answer.question_id = 	res.rows.item(i).remote_id;
+					answer.testanswer =  	res.rows.item(i).testanswer == 1 ? true : false;
+					answer.answer = 		res.rows.item(i).answer;
+					answer.signal_date =  	res.rows.item(i).signal_date;
+					answer.answer_date =  	res.rows.item(i).answer_date;
+
+					answer_data.answers.push(answer);
+				};
+
+				
+				
+				studyData.remote_data.answers = answer_data;
+				return studyData;
+
+			}).then( function (studyDataWithA) {
+				console.log(studyDataWithA.remote_data.answers);
+				console.log(JSON.stringify(studyDataWithA.remote_data.answers));
+				var url = studyDataWithA.remote_data.studyServer +  '/api/v1/study/' + studyDataWithA.remote_data.studyId + '?password=' + studyDataWithA.remote_data.studyPassword;
+				return $http.post(url, studyDataWithA.remote_data.answers).then(function (res) {
+					studyDataWithA.remote_data.synched = false;	
+					if (res.status === 200 && typeof res.data.code !== 'undefined' && res.data.code == 200) {
+						studyDataWithA.remote_data.synched = true;	
+					}
+					return studyDataWithA;
+				}, function (err) {
+					console.error(err);
+				})
+			}).then( function (studyDataWithSyncInfo) {
+				return _deleteAnswersByStudy(studyDataWithSyncInfo);
+			}).catch(function (err) {
+				console.error(err);
+			})
 		}
+
+		var _deleteAnswersByStudy = function(studyData) {
+			var query = "DELETE FROM answers WHERE question_id IN (SELECT q.id FROM questions q INNER JOIN questiongroups qg ON q.questiongroup_id = qg.id INNER JOIN substudies ss ON qg.substudy_id = ss.id WHERE ss.study_id = ?)";
+
+			if (studyData.remote_data.synched) {
+				return $cordovaSQLite.execute(db, query, [studyData.local_data.studyId]).then(function(res) {
+					return studyData;
+				})	
+			} else {
+				return studyData;
+			}
+
+			
+		}	
 
 		//Tries to retrieve a Subject id based on the server
 		var _retrieveServerId = function(insertData) {
@@ -427,8 +485,8 @@ angular.module('tabete.services', ['ngCordova'])
 		// Insert Question Groups to Database
 		var _insertQuestionGroups = function (substudy_id, questiongroups) {
 			angular.forEach(questiongroups, function (questiongroup) {
-				var query ="INSERT INTO questiongroups (version, substudy_id, name, sequence_id, randomorder) VALUES (?, ?, ?, ?, ?)";
-				return $cordovaSQLite.execute(db, query, [questiongroup.version, substudy_id, questiongroup.name, questiongroup.seq_id, questiongroup.randomorder === true ? 1 : 0]).then(function (res) {
+				var query ="INSERT INTO questiongroups (version, substudy_id, name, description, sequence_id, randomorder) VALUES (?, ?, ?, ?, ?, ?)";
+				return $cordovaSQLite.execute(db, query, [questiongroup.version, substudy_id, questiongroup.name, questiongroup.description, questiongroup.seq_id, questiongroup.randomorder === true ? 1 : 0]).then(function (res) {
 					var query_select = "SELECT id FROM questiongroups WHERE substudy_id = ? AND sequence_id = ?";
 					return $cordovaSQLite.execute(db, query_select, [substudy_id, questiongroup.seq_id]).then(function (res2) {
 						var qg_id = res2.rows.item(0).id;
@@ -625,7 +683,7 @@ angular.module('tabete.services', ['ngCordova'])
         }
 
         var _getRulesBySubstudyId = function (dataset) {
-        	console.log(dataset);
+        	// console.log(dataset);
         	var query = "SELECT r.id, r.question_id, r.answer_value, r.questiongroup_id FROM rules r INNER JOIN questiongroups qg ON r.questiongroup_id = qg.id WHERE qg.substudy_id = ?";
         	return $cordovaSQLite.execute(db, query, [dataset.substudy_id]).then(function(res) {
         		dataset.rules = [];
@@ -644,11 +702,12 @@ angular.module('tabete.services', ['ngCordova'])
         }
 
         this.getQuestiongroup = function(questiongroupId) {
-        	var query = "SELECT name, randomorder, substudy_id FROM questiongroups WHERE id = ?";
+        	var query = "SELECT name, description, randomorder, substudy_id FROM questiongroups WHERE id = ?";
         	return $cordovaSQLite.execute(db, query, [questiongroupId]).then(function (res) {
         		questiongroupData = {
         			id: 			questiongroupId,
         			name: 			res.rows.item(0).name,
+        			description: 	res.rows.item(0).description,
         			randomorder: 	res.rows.item(0).randomorder === 1 ? true : false,
         			substudy_id: 	res.rows.item(0).substudy_id,
         			is_valid: 		true 
@@ -669,7 +728,7 @@ angular.module('tabete.services', ['ngCordova'])
         }
 
         this.getQuestionsByQuestiongroupId = function(questiongroupId) {
-			console.log("QuestionGroup ID is " + questiongroupId);
+			// console.log("QuestionGroup ID is " + questiongroupId);
         	
         	function compare(a,b) {
   				if (a.sequence_id < b.sequence_id)
@@ -845,11 +904,11 @@ angular.module('tabete.services', ['ngCordova'])
 
 
         		for (var i = 0; i < dataset_qg.questiongroups.length; i++) {
-        			console.log("comparing " + dataset_qg.questiongroups[i].id + " with " + questiongroupId);
+        			// console.log("comparing " + dataset_qg.questiongroups[i].id + " with " + questiongroupId);
 
         			if (dataset_qg.questiongroups[i].id == questiongroupId) {
         				nextQgIndex = i + 1;
-        				console.log("found questiongroupId " + i);
+        				// console.log("found questiongroupId " + i);
         				break;
         			}
         		}
@@ -871,7 +930,7 @@ angular.module('tabete.services', ['ngCordova'])
         					// console.log(answerObject.answers[answerIndex]);
         					if (answerIndex !== -1) {
         						//Check if string contains ';' --> multichoice answer - to be split in array
-        						if (answerObject.answers[answerIndex].answer.indexOf(';') !== -1) {
+        						if (answerObject.answers[answerIndex].answer != null && answerObject.answers[answerIndex].answer.indexOf(';') !== -1) {
         							if (answerObject.answers[answerIndex].answer.indexOf(daRule[j].answer_value) !== -1) {
         								ruleIsMet = true;
         								nextQuestiongroupId = dataset_qg.questiongroups[i].id;
@@ -910,7 +969,7 @@ angular.module('tabete.services', ['ngCordova'])
         	//Get answer object for signal_date
 
         	$cordovaSQLite.execute(db, query, [answerData.question_id, answerData.answer, inTestMode ? 1 : 0, answerDate, signalDate]).then(function (res) {
-        		console.log('answer saved: ' + answerData.question_id);
+        		// console.log('answer saved: ' + answerData.question_id);
         	}).catch( function (err) {
         		console.error(err);
         	});
@@ -1079,23 +1138,29 @@ angular.module('tabete.services', ['ngCordova'])
 
 	//Sync a single study - Helper method
 	var _syncStudy = function (syncStudyData) {
+
 		return dataLayer.compareStudyVersion(syncStudyData).then(function (compared_versions){
-			if (compared_versions.local_data.version === compared_versions.local_data.version) {
+
+			if (compared_versions.remote_data.version === compared_versions.local_data.version) {
 				return dataLayer.postAnswersToServer(compared_versions);
 			}
 			else {
 				var inputData = { studyData: compared_versions.remote_data }
+				console.log('Different versions, deleting old data');
 				return dataLayer.deleteStudyByStudyId(compared_versions.local_data.studyId).then(function (res) {
 					console.log(inputData);
 					return dataLayer.getStudyDataFromServer(inputData);
 				}).then(function (importData) {
 					if(dataLayer.validateStudyData(importData.jsonStudyData)) {
+						console.log('inserting current data');
 						return dataLayer.insertStudy(importData)
 					} else {
 						return $q.reject('Study data could not be validated');
 					}
 				})
 			}
+		}).catch(function (err) {
+			console.error(err);
 		})
 	}
 
@@ -1178,7 +1243,8 @@ angular.module('tabete.services', ['ngCordova'])
     		}
     		return $q.all(studyHandling);
     	}).then(function (results) {
-    		console.log(results);
+    		// console.log(results);
+
     		_hideLoadScreen();
     		return results;
     	}).catch(function (err) {
@@ -1230,7 +1296,9 @@ angular.module('tabete.services', ['ngCordova'])
 			if (questions[i].type === "MULTICHOICE") {
 
 				var mc_answers = questions[i].answer == null ? [] : questions[i].answer.split(';');
-				
+				if (questions[i].min == undefined || questions[i].min == null) {
+					questions[i].min = 0;
+				}
 				if (mc_answers.length < parseInt(questions[i].min) || mc_answers.length > parseInt(questions[i].max)) {
 					questions[i].valid = false;
 					qgroup_valid = false;
@@ -1271,6 +1339,10 @@ angular.module('tabete.services', ['ngCordova'])
 
 	}
 
+	this.getStudiesWithSubstudies = function () { return dataLayer.getStudiesWithSubstudies(); }
+
+	this.deleteStudyByStudyId = function (studyId) { return dataLayer.deleteStudyByStudyId(studyId); }
+
 	this.getQuestiongroup = function (questiongroupId) { return dataLayer.getQuestiongroup(questiongroupId); }
 
 	this.getQuestionsByQuestiongroupId = function (questiongroupId) { return dataLayer.getQuestionsByQuestiongroupId(questiongroupId); }
@@ -1304,8 +1376,6 @@ angular.module('tabete.services', ['ngCordova'])
     		}
     		return $q.all(studyHandling);
     	}).then(function (results) {
-    		console.log(results);
-
     		return results;
     	}).catch(function (err) {
 

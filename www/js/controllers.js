@@ -69,11 +69,7 @@ angular.module('tabete.controllers', [])
 })
 
 .controller('StudiesCtrl', function($scope, $state, $ionicPlatform, studyServices, $ionicLoading, $ionicModal, $q, $ionicPopup, $localstorage, $cordovaBarcodeScanner, $http, dataLayer, devTest, $cordovaLocalNotification, $rootScope, $timeout) {
-// DEVTEST Data
-  $scope.t_studies = [
-    { title: 'Zeitverwendung im Studienalltag', id: 1 },
-    { title: 'Langeweile im Praktikum', id: 2 }
-  ];
+
   //DEV Buttons
   $scope.resetDatabase = function() {
     devTest.devReset();
@@ -229,6 +225,9 @@ angular.module('tabete.controllers', [])
   //Synchronize all Data on Device
   $scope.synchronizeData = function() {
     studyServices.synchronizeData().then(function (res) {
+      $timeout(function() {
+        $scope.updateStudies();
+      }, 1000)
       console.log('done');
     })
   }
@@ -267,6 +266,70 @@ angular.module('tabete.controllers', [])
 
 })
 
+.controller('DeleteCtrl', function($scope, studyServices, $ionicPlatform, $ionicPopup, $ionicLoading, $timeout) {
+    $scope.studies = [];
+
+     //Set view mode: list of substudies or info none
+  $scope.checkForStudies = function() {
+    if ($scope.studies !== undefined && $scope.studies !== null && $scope.studies.length > 0) {
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  //Update study list
+  $scope.updateStudies = function () {
+    $ionicPlatform.ready(function() 
+      { studyServices.getStudiesWithSubstudies().then(function (res) {
+        console.log(res);
+        $scope.studies = res;
+        $scope.hasStudies = $scope.checkForStudies();
+      })
+    })
+  };
+
+  $scope.updateStudies();
+
+  $scope.deleteStudy = function(studyId) {
+
+    var confString = "Sind Sie sicher dass Sie die Studie und alle zugehörigen Daten löschen möchten? Die Studie umfasst die folgenden Teilstudie(n): <br/><br/><ol>";
+
+    for (var i = 0; i < $scope.studies.length; i++) {
+      if ($scope.studies[i].study_id == studyId) {
+        confString += "<li>" + $scope.studies[i].substudy_title + "</li>";
+      }
+    };
+
+    confString += "</ul><br/>";
+
+     var confirmPopup = $ionicPopup.confirm({
+       title: 'Studie löschen',
+       template: confString
+     });
+     confirmPopup.then(function(res) {
+      if(res) {
+        studyServices.deleteStudyByStudyId(studyId).then(function (res) {
+          $scope.updateStudies();
+
+          $ionicLoading.show({
+            template: '<p>Studie gelöscht</p>'
+          });
+
+          $timeout(function() {
+              $ionicLoading.hide();
+          }, 2000);
+        })
+       }
+     });
+
+
+  }
+
+
+})
+
 .controller('QuestiongroupCtrl', function($scope, $rootScope, $state, $ionicPlatform, $ionicHistory, $ionicLoading, $stateParams, $ionicSideMenuDelegate, $cordovaNetwork, $timeout, dataLayer, studyServices) {
   //Disable Back Button 
   $ionicPlatform.registerBackButtonAction(function (event) {
@@ -280,6 +343,8 @@ angular.module('tabete.controllers', [])
   $scope.$on('$ionicView.beforeLeave', function (e, data) { 
     $rootScope.enableLeftSideMenu = true;
   });  
+
+  console.log(Date.now());
   
   $scope.questiongroup = {};
   $scope.questions = [];
@@ -343,7 +408,8 @@ angular.module('tabete.controllers', [])
     }
 
     $scope.questions[questionIndex].answer = multiChoiceValues.join(';');
-    console.log($scope.questions[questionId].answer);
+    // console.log($scope.questions[questionIndex]);
+
   }
 
   $scope.nextQuestionGroup = function() {
@@ -388,7 +454,11 @@ angular.module('tabete.controllers', [])
 
       //Save answer object
       studyServices.setAnswerObject(answerObject, $scope.questiongroup.substudy_id);
+
       
+      console.log(answerObject);
+      console.log($scope.questions);
+
       studyServices.getNextQuestiongroup($scope.questiongroup.id).then(function (nextQuestionGroup) {
         console.log('current id is ' + $scope.questiongroup.id);
         console.log('Next Questiongroup is ' + nextQuestionGroup);
