@@ -56,7 +56,7 @@
 			    				<span class="input-label">{{ question.text }} </span>
 			    			</label>
 			    				<div class="list" ng-class="{{ question.valid ? '' : item-error }}">
-			    					<ion-checkbox ng-repeat="option in question.questionoptions" ng-model="option.checked" ng-checked="option.checked" ng-change="multichoiceValueChanged(question.id)">{{option.description + " " + option.checked }}
+			    					<ion-checkbox ng-repeat="option in question.questionoptions" ng-model="option.checked" ng-checked="option.checked" ng-change="multichoiceValueChanged(question.id)">{{option.description }}
 			    					</ion-checkbox>
 			    				</div>
 			  			</div>

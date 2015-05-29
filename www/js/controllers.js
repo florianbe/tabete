@@ -98,48 +98,136 @@ angular.module('tabete.controllers', [])
   }
 
   $scope.testDatabaseAccess = function() {
-    $scope.updateStudies();
+    console.log(Date.now());
+    $cordovaLocalNotification.getScheduledIds().then(function (res) {
+                          $cordovaLocalNotification.get(res).then(function (sigs) {
+                            console.log(sigs);
+                          })
+            
+          })
 
 
   }
 
   $scope.testLocalNotification = function () {
-    alert("test");
-
 
     var alarmTime = new Date();
     alarmTime.setMinutes(alarmTime.getMinutes() + 1);
     $cordovaLocalNotification.schedule({
-        id: "1234",
+        id: 1,
         date: alarmTime,
         message: "This is a message",
         title: "This is a title",
         data: {
-          substudy_id: 1
+          substudy_id: 1,
+          sginaltime: alarmTime
         }
     }).then(function () {
         console.log("The notification has been set");
     });
   }
 
-  $rootScope.$on('$cordovaLocalNotification:trigger',
-    function (event, notification, state) {
-      console.log('trigger');
-      console.log(event);
-      console.log(notification);
-      console.log(state);
-      alert("A loc Not was triggered");
-      $state.go('app.questiongroup', {'questiongroupId': notification.data.substudy_id});
-    });
+  // $rootScope.$on('$cordovaLocalNotification:trigger',
+  //   function (event, notification, state) {
+      
+  //     console.log(state);
 
-  $rootScope.$on('$cordovaLocalNotification:click',
-    function (event, notification, state) {
-      console.log('click');
-      console.log(event);
-      console.log(notification);
-      console.log(state);
-      alert("A loc Not was clicked");
+  //     console.log(notification.data);
+  //     console.log(notification.data['substudy_id']);
+
+  //     studyServices.scheduleSignalsBySubstudy(notification.data.substudy_id);
+
+  //     var confirmPopup = $ionicPopup.confirm({
+  //       title: 'Studie beantworten',
+  //       template: 'Bitte beantworten Sie jetzt einige Fragen'
+  //     });
+  //     confirmPopup.then(function(res) {
+  //       if(res) {
+          
+  //         if (!$scope.settings.hasOwnProperty('passwordset'))
+  //         {
+  //           $scope.settings = {
+  //           testmode:     false, 
+  //           passwordset:  false,
+  //           password:     ""
+  //           };
+  //         }
+
+  //         $scope.settings.testmode = false;
+  //         $localstorage.setObject('settings', $scope.settings);
+
+  //         console.log(notification.data);
+  //         console.log(notification.data.substudy_id);
+
+  //         startSubstudy(notification.data['substudy_id'], notification.data['signaltime']);
+  //       }
+  //     });
+
+      
+      
+  //   });
+
+  $rootScope.$on('$cordovaLocalNotification:schedule', function(event, notification, state) {
+    console.log('notification ADDED');
+    console.log(event);
+    console.log(notification);
+    console.log(state);
+  });
+
+  $rootScope.$on('$cordovaLocalNotification:trigger', function(event, notification, state) {
+    console.log('notification triggered');
+    console.log(event);
+    console.log(notification);
+    console.log(state);
+    alert('Triggered');
+  });
+
+  $rootScope.$on('$cordovaLocalNotification:click', function(event, notification, state) {
+    console.log('notification clicked');
+    console.log(event);
+    console.log(notification);
+    console.log(state);
+    alert('clicked');
+  });
+
+  $scope.$on('onReminderAdded', function(event, id, state, json) {
+    console.log('notification ADDED scope, id: ' + id  + ' state:' + state + ' json:' + json );
+  });
+
+  $rootScope.$on('onReminderAdded', function(event, id, state, json) {
+    console.log('notification ADDED rootScope, id: ' + id  + ' state:' + state + ' json:' + json );
+  });
+  // $rootScope.$on('$cordovaLocalNotification:click',
+  //   function (event, notification, state) {
+  //     console.log('click');
+  //     console.log(event);
+  //     console.log(notification);
+  //     console.log(state);
+  //     alert("A loc Not was clicked");
+  //   });
+
+  $ionicPlatform.ready(function () {
+    
+    if (window.cordova) {
+      var alarmTime = new Date();
+    alarmTime.setMinutes(alarmTime.getMinutes() + 3);
+    $cordovaLocalNotification.schedule({
+        id: 3,
+        date: alarmTime,
+        message: "This is a auto message",
+        title: "This is a auto title",
+        data: {
+          substudy_id: 1,
+          sginaltime: alarmTime.getTime()
+        }
+    }).then(function () {
+        console.log("The notification has been set");
     });
+  }
+  
+  })
+  
+
 
   $scope.substudies = [];
   $scope.substudies = null;
@@ -248,11 +336,8 @@ angular.module('tabete.controllers', [])
     //     });
     //   })
     //   })
-    dataLayer.startSubstudy(substudyId).then(function (questiongroupId) {
-      console.log("Starting substudy, first questiongroup: " + questiongroupId);
-      $state.go('app.questiongroup', {'questiongroupId': questiongroupId});
-    })
-
+    
+    startSubstudy(substudyId, Date.now());
     
 
     //   $state.go('app.questiongroup', {'questiongroupId': substudyId});
@@ -261,12 +346,21 @@ angular.module('tabete.controllers', [])
     // });
   }
 
+  var startSubstudy = function(substudyId, signaltime) {
+    dataLayer.startSubstudy(substudyId, signaltime).then(function (questiongroupId) {
+      console.log("Starting substudy, first questiongroup: " + questiongroupId);
+      $state.go('app.questiongroup', {'questiongroupId': questiongroupId});
+    })
+  
+  }
+
   $scope.updateStudies();
 
 
 })
 
 .controller('DeleteCtrl', function($scope, studyServices, $ionicPlatform, $ionicPopup, $ionicLoading, $timeout) {
+
     $scope.studies = [];
 
      //Set view mode: list of substudies or info none
@@ -344,8 +438,7 @@ angular.module('tabete.controllers', [])
     $rootScope.enableLeftSideMenu = true;
   });  
 
-  console.log(Date.now());
-  
+ 
   $scope.questiongroup = {};
   $scope.questions = [];
 

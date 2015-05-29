@@ -4,7 +4,7 @@
 // 'starter' is the name of this angular module example (also set in a <body> attribute in index.html)
 // the 2nd parameter is an array of 'requires'
 // 'starter.controllers' is found in controllers.js
-angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', 'ngCordova', 'tabete.services', 'tabete.controllers'])
+var app = angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', 'ngCordova', 'tabete.services', 'tabete.controllers'])
 
 .run(function($ionicPlatform, $cordovaSQLite) {
   $ionicPlatform.ready(function() {
@@ -19,6 +19,7 @@ angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', '
     }
 
     //Database: open web DB or SQLITE
+    //Add event listeners for local notification
     if(window.cordova) {
       // App syntax
       db = $cordovaSQLite.openDB("tabete.db");
@@ -47,6 +48,8 @@ angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', '
         //ANSWERS
         $cordovaSQLite.execute(db, "CREATE TABLE IF NOT EXISTS answers (id integer primary key, question_id integer, answer text, testanswer integer, answer_date text, signal_date text)");
   });
+
+      
 })
 
 .config(function($stateProvider, $urlRouterProvider) {
@@ -70,6 +73,7 @@ angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', '
     })
 
   .state('app.delete', {
+      cache: false,
       url: "/delete", 
       views: {
         'menuContent': {

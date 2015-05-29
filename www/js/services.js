@@ -118,7 +118,7 @@ angular.module('tabete.services', ['ngCordova'])
 		return self;
 	})
 
-	.factory('dataLayer', function($http, $cordovaSQLite, $q, $localstorage) {
+	.factory('dataLayer', function($http, $cordovaSQLite, $q, $localstorage, $cordovaLocalNotification) {
 		var self = this;
 
 		var _studyAnswers = {};
@@ -461,14 +461,17 @@ angular.module('tabete.services', ['ngCordova'])
                 	var query_select = "SELECT id FROM substudies WHERE study_id = ? AND title = ?";
                 	return $cordovaSQLite.execute(db, query_select, [insertData.jsonStudyData.study_id, substudy.title])
                 	.then(function(res){
+                		console.log('reading substudy id')
                 		sustu_id = res.rows.item(0).id;
+                		console.log(sustu_id);
                 		// insert signal points if study is signalbased
                 		if (substudy.trigger === 'FIX' || substudy.trigger === 'FLEX') {
+                			console.log('triggered study');
                 			_insertSignalPoints(sustu_id, substudy.trigger_signals);
                 		}
                 		_insertQuestionGroups(sustu_id, substudy.questiongroups);
                 		console.log('in the inserter');
-                		return true;
+
                 	})
         		})
             });
@@ -476,10 +479,19 @@ angular.module('tabete.services', ['ngCordova'])
 
 		// Insert Signal Points to Database
 		var _insertSignalPoints = function (substudy_id, signalpoints) {
+			var deferred = $q.defer();
+	    	var sigPoints = [];
+
 			angular.forEach(signalpoints, function (signalpoint) {
 				var query = "INSERT INTO signalpoints (substudy_id, signal_date) VALUES (?, ?)";
-				$cordovaSQLite.execute(db, query, [substudy_id, signalpoint.time]);
+				sigPoints.push($cordovaSQLite.execute(db, query, [substudy_id, signalpoint.time]));
 			})
+
+			$q.all(sigPoints).then(function (res) {
+				_scheduleSignalsBySubstudy(substudy_id);	
+			})
+
+            
 		}
 
 		// Insert Question Groups to Database
@@ -648,7 +660,7 @@ angular.module('tabete.services', ['ngCordova'])
         			})        			
         		};
         		        		
-
+        		console.log(dataset);
         		return dataset;
         	}, function (err) {
         		console.error(err);
@@ -818,28 +830,50 @@ angular.module('tabete.services', ['ngCordova'])
         	})
         }
 
-        var _getAnswerByQuestionAndSignalTime = function (questionId, signaltime) {
-        	var query = "SELECT q.type AS type, a.answer AS answer FROM answers a INNER JOIN questions q ON a.question_id = q.id WHERE a.question_id = ? AND a.signal_date = ?";
-        	return $cordovaSQLite.execute(db, query, [questionId, signaltime.toString()]).then (function (res) {
-        		if (res.rows.length > 0) {
-        			return {
-        				type: 	res.rows.item(0).type,
-        				answer: res.rows.item(0).answer,
-        			};
-        		}
-        		else {
-        			return null;
-        		}
-        	}, function (err) {
-        		console.log(err);
-        	})
-        }
+        var _scheduleSignalsBySubstudy = function (substudyId) {
+		var query = "SELECT id, substudy_id, signal_date FROM signalpoints WHERE substudy_id = ? ORDER BY signal_date ASC";
+		$cordovaSQLite.execute(db, query, [substudyId]).then(function (res) {
+		var signalsToDelete = [];
+		var signalsToSchedule = [];
 
-        var _initAnswerObject = function(substudyId) {
+		if (res.rows.length > 0) {
+
+			var maxSignalsToSchedule = 10;
+			for (var i = 0; i < res.rows.length; i++) {
+				if (Date.parse(res.rows.item(i).signal_date) < Date.now()) {
+					signalsToDelete.push[res.rows.item(i).id];
+				} else if (signalsToSchedule.length < 10) {
+					$cordovaLocalNotification.schedule({
+						id: 	res.rows.item(i).id,
+						title: 	'Datenerfassung Studie',
+						text: 	'Bitte beantworten Sie die folgenden Fragen',
+						at: 	Date.parse(res.rows.item(i).signal_date),
+						data:   {
+							substudy_id: 	res.rows.item(i).substudy_id,
+							signaltime: 	Date.parse(res.rows.item(i).signal_date)
+							}
+						})
+					} 
+				}
+			}
+			
+			var deleteQuery = "DELETE FROM signalpoints WHERE id = ?";
+			for (var i = 0; i < signalsToDelete.length; i++) {
+				$cordovaSQLite.execute(db, deleteQuery, [signalsToDelete[i]]);
+			};
+
+
+		  }).catch(function (err) {
+	      	console.error(err);
+	      })
+			
+	}
+
+        var _initAnswerObject = function(substudyId, signaltime) {
         	//Overwrite the variable in localstorage just in case
         	var substudy_answers = {};
-        	substudy_answers.substudyId 		= substudyId;
-        	substudy_answers.signaltime = Date.now();
+        	substudy_answers.substudyId = substudyId;
+        	substudy_answers.signaltime = signaltime;
         	substudy_answers.answers 	= [];
 
         	//Overwrite the variable in localstorage just in case
@@ -856,7 +890,7 @@ angular.module('tabete.services', ['ngCordova'])
 			  if (!substudy_answers.hasOwnProperty('substudyId'))
 			  {
 			  	console.log('no answer object found creating new one');
-			  	substudy_answers = _initAnswerObject(substudyId);
+			  	substudy_answers = _initAnswerObject(substudyId, Date.now());
 			  }
 
 			return substudy_answers;
@@ -867,10 +901,11 @@ angular.module('tabete.services', ['ngCordova'])
         	$localstorage.setObject('answers_' + substudyId, answerObject);
         }
 
-        this.startSubstudy = function (substudyId) {
+        this.startSubstudy = function (substudyId, signaltime) {
         	//Generate new answer object
         	dataset = {substudy_id: substudyId};
-        	var answerData = _initAnswerObject(dataset.substudy_id);
+        	console.log(dataset);
+        	var answerData = _initAnswerObject(dataset.substudy_id, signaltime);
         	
         	return _getQuestionGroupsBySubstudyId(dataset).then( function (res) {
         		return res.questiongroups[0].id;
@@ -1022,6 +1057,24 @@ angular.module('tabete.services', ['ngCordova'])
 			}, function (err){
 				console.error(err);
 			})}).then(function (studyId) {
+				var query = "SELECT id FROM signalpoints WHERE substudy_id IN (SELECT id FROM substudies WHERE study_id = ?)";
+				return $cordovaSQLite.execute(db, query, [studyId]).then(function (res) {
+					var signalsToDelete = [];
+					for (var i = 0; i < res.rows.length; i++) {
+						signalsToDelete.push(res.rows.item(i).id);
+					};
+					if (signalsToDelete.length > 0) {
+						console.log("Deleting signals:");
+						console.log(signalsToDelete);
+						$cordovaLocalNotification.cancel(signalsToDelete);
+					} else {
+						console.log("No signals to delete");
+					}
+					return studyId;
+				})
+			}, function (err) {
+				console.error(err);
+			}).then(function (studyId) {
 			//signal points
 				var query = "DELETE FROM signalpoints WHERE substudy_id IN (SELECT id FROM substudies WHERE study_id = ?)";
 				return $cordovaSQLite.execute(db, query, [studyId]).then(function(res){
@@ -1109,6 +1162,7 @@ angular.module('tabete.services', ['ngCordova'])
 
 	    this.getAnswerObject = function (substudyId) { return _getAnswerObject(substudyId); }
 	    this.setAnswerObject = function (answerObject, substudyId) { _setAnswerObject(answerObject, substudyId); }
+	    this.scheduleSignalsBySubstudy = function(substudyId) { _scheduleSignalsBySubstudy(substudyId); }
 	    this.getMoods = _getMoods;
 	    this.getIntensities = _getIntensities;
 	    this.shuffleArray = _shuffleArray;
@@ -1253,16 +1307,6 @@ angular.module('tabete.services', ['ngCordova'])
     	})
     }
 
-
-	this.syncTest = function () {
-		var query = "SELECT * FROM studies"
-		$cordovaSQLite.execute(db, query, []).then (function (res) {
-			console.log(res);
-		}).catch(function (err) {
-			console.log(err);
-		})
-	}
-
 	this.validateQuestionGroup = function (questions) {
 
 
@@ -1338,6 +1382,10 @@ angular.module('tabete.services', ['ngCordova'])
 		return questions;
 
 	}
+
+	
+
+	this.scheduleSignalsBySubstudy = function (substudyId) { return dataLayer.scheduleSignalsBySubstudy(substudyId); }
 
 	this.getStudiesWithSubstudies = function () { return dataLayer.getStudiesWithSubstudies(); }
 
