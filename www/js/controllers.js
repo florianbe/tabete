@@ -175,28 +175,78 @@ angular.module('tabete.controllers', [])
   });
 
   $rootScope.$on('$cordovaLocalNotification:trigger', function(event, notification, state) {
-    console.log('notification triggered');
-    console.log(event);
-    console.log(notification);
-    console.log(state);
-    alert('Triggered');
+    
+    $state.go('app.studies');
+    var noti_data = JSON.parse(notification.data);
+    studyServices.scheduleSignalsBySubstudy(noti_data.substudy_id);
+
+
+    if (state === 'foreground') {
+      var confirmPopup = $ionicPopup.confirm({
+            title: 'Studie bearbeiten',
+            template: 'Bitte beantworten Sie jetzt einige Fragen'
+          });
+      confirmPopup.then(function(res) {
+            if(res) {
+              
+              if (!$scope.settings.hasOwnProperty('passwordset'))
+              {
+                $scope.settings = {
+                testmode:     false, 
+                passwordset:  false,
+                password:     ""
+                };
+              }
+
+              $scope.settings.testmode = false;
+              $localstorage.setObject('settings', $scope.settings);
+              $cordovaLocalNotification.clear(notification.id);        
+              startSubstudy(noti_data.substudy_id, noti_data.signaltime);
+            }
+          });
+    }
+
+
   });
 
   $rootScope.$on('$cordovaLocalNotification:click', function(event, notification, state) {
-    console.log('notification clicked');
-    console.log(event);
-    console.log(notification);
-    console.log(state);
-    alert('clicked');
+
+    $state.go('app.studies');
+    var noti_data = JSON.parse(notification.data);
+    studyServices.scheduleSignalsBySubstudy(noti_data.substudy_id);
+    
+    if (state !== 'foreground') {
+     var confirmPopup = $ionicPopup.confirm({
+            title: 'Studie bearbeiten',
+            template: 'Bitte beantworten Sie jetzt einige Fragen'
+          });
+      confirmPopup.then(function(res) {
+            if(res) {
+              
+              if (!$scope.settings.hasOwnProperty('passwordset'))
+              {
+                $scope.settings = {
+                testmode:     false, 
+                passwordset:  false,
+                password:     ""
+                };
+              }
+
+              $scope.settings.testmode = false;
+              $localstorage.setObject('settings', $scope.settings);
+              $cordovaLocalNotification.clear(notification.id);        
+              startSubstudy(noti_data.substudy_id, noti_data.signaltime);
+            }
+          }); 
+    }
+
+
   });
 
-  $scope.$on('onReminderAdded', function(event, id, state, json) {
-    console.log('notification ADDED scope, id: ' + id  + ' state:' + state + ' json:' + json );
-  });
+     
+    
+  
 
-  $rootScope.$on('onReminderAdded', function(event, id, state, json) {
-    console.log('notification ADDED rootScope, id: ' + id  + ' state:' + state + ' json:' + json );
-  });
   // $rootScope.$on('$cordovaLocalNotification:click',
   //   function (event, notification, state) {
   //     console.log('click');
@@ -206,26 +256,26 @@ angular.module('tabete.controllers', [])
   //     alert("A loc Not was clicked");
   //   });
 
-  $ionicPlatform.ready(function () {
+  // $ionicPlatform.ready(function () {
     
-    if (window.cordova) {
-      var alarmTime = new Date();
-    alarmTime.setMinutes(alarmTime.getMinutes() + 3);
-    $cordovaLocalNotification.schedule({
-        id: 3,
-        date: alarmTime,
-        message: "This is a auto message",
-        title: "This is a auto title",
-        data: {
-          substudy_id: 1,
-          sginaltime: alarmTime.getTime()
-        }
-    }).then(function () {
-        console.log("The notification has been set");
-    });
-  }
+  //   if (window.cordova) {
+  //     var alarmTime = new Date();
+  //   alarmTime.setMinutes(alarmTime.getMinutes() + 3);
+  //   $cordovaLocalNotification.schedule({
+  //       id: 3,
+  //       date: alarmTime,
+  //       message: "This is a auto message",
+  //       title: "This is a auto title",
+  //       data: {
+  //         substudy_id: 1,
+  //         sginaltime: alarmTime.getTime()
+  //       }
+  //   }).then(function () {
+  //       console.log("The notification has been set");
+  //   });
+  // }
   
-  })
+  // })
   
 
 

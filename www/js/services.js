@@ -309,7 +309,7 @@ angular.module('tabete.services', ['ngCordova'])
 		}
 
 		this.postAnswersToServer = function(studyData) {
-			console.log('postAnswersToServer: to be done');
+
 			console.log(studyData);
 
 			var query = "SELECT a.answer, a.testanswer, a.signal_date, a.answer_date, q.remote_id FROM answers a INNER JOIN questions q ON a.question_id = q.id INNER JOIN questiongroups qg ON q.questiongroup_id = qg.id INNER JOIN substudies ss ON qg.substudy_id = ss.id WHERE ss.study_id = ?";
@@ -843,15 +843,18 @@ angular.module('tabete.services', ['ngCordova'])
 				if (Date.parse(res.rows.item(i).signal_date) < Date.now()) {
 					signalsToDelete.push[res.rows.item(i).id];
 				} else if (signalsToSchedule.length < 10) {
+					var data = {
+							substudy_id: 	res.rows.item(i).substudy_id,
+							signaltime: 	Date.parse(res.rows.item(i).signal_date)
+						}
+
+
 					$cordovaLocalNotification.schedule({
 						id: 	res.rows.item(i).id,
 						title: 	'Datenerfassung Studie',
 						text: 	'Bitte beantworten Sie die folgenden Fragen',
 						at: 	Date.parse(res.rows.item(i).signal_date),
-						data:   {
-							substudy_id: 	res.rows.item(i).substudy_id,
-							signaltime: 	Date.parse(res.rows.item(i).signal_date)
-							}
+						data: 	data  
 						})
 					} 
 				}
