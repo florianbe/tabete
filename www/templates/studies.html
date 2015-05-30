@@ -1,4 +1,4 @@
-<ion-view view-title="Studienübersicht">
+<ion-view view-title="Studienübersicht" hide-back-button="true">
   
   <ion-nav-buttons side="right">
       <button class="button button-clear" ng-click="synchronizeData()">
@@ -16,7 +16,8 @@
       </ion-item>
     </ion-list>
   <button class="button button-block icon-left ion-plus-circled button-positive" ng-click="showNewStudy()">Neue Studie hinzufügen</button>	
-    <h1>{{settings.testmode}}</h1>
+  <p>Testmode activated: {{ settings.testmode }} </p>
+    
   <button class="button button-block" ng-click="resetDatabase()">Reset Database</button>  
   <button class="button button-block" ng-click="testHttp()">Test http stuff</button>
   <button class="button button-block" ng-click="testDataImport()">Test Data Import</button>
