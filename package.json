@@ -18,12 +18,18 @@
     "org.apache.cordova.device",
     "org.apache.cordova.console",
     "com.ionic.keyboard",
+    "com.phonegap.plugins.barcodescanner",
+    "cordova-plugin-network-information",
+    "cordova-plugin-whitelist",
+    "android.support.v4",
+    "io.litehelpers.cordova.sqlite",
     {
-      "locator": "https://github.com/katzer/cordova-plugin-local-notifications.git",
+      "locator": "https://github.com/Telerik-Verified-Plugins/LocalNotification",
       "id": "de.appplant.cordova.plugin.local-notification"
     }
   ],
   "cordovaPlatforms": [
-    "android"
+    "android",
+    "ios"
   ]
 }

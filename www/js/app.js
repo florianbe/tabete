@@ -18,6 +18,11 @@ var app = angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListD
       StatusBar.styleDefault();
     }
 
+    //request permission for notification on ios
+    if(device.platform === "iOS") {
+        window.plugin.notification.local.promptForPermission();
+    }
+
     //Database: open web DB or SQLITE
     //Add event listeners for local notification
     if(window.cordova) {

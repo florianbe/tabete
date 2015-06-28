@@ -1293,12 +1293,19 @@ angular.module('tabete.services', ['ngCordova'])
 		_showLoadScreen();
 
     	return dataLayer.getStudies().then(function (studies) {
-    		return dataLayer.deleteOldStudies(studies);
-    	}).then(function (currentStudies) {
-    		for (var i = 0; i < currentStudies.length; i++) {
-    			studyHandling.push(_syncStudy(currentStudies[i]));
+    		if (studies.length > 0) {
+    			return dataLayer.deleteOldStudies(studies);	
     		}
-    		return $q.all(studyHandling);
+    		else return false;
+    	}).then(function (currentStudies) {
+    		if (currentStudies !== false) {
+    			for (var i = 0; i < currentStudies.length; i++) {
+    			studyHandling.push(_syncStudy(currentStudies[i]));
+    			}
+    			return $q.all(studyHandling);	
+    		} else {
+    			return false;
+    		}
     	}).then(function (results) {
     		// console.log(results);
 
