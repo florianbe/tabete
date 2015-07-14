@@ -1,5 +1,6 @@
 angular.module('ionic.utils', [])
 
+//Set and retrieve values from localstorage
 .factory('$localstorage', ['$window', function($window) {
   return {
     set: function(key, value) {

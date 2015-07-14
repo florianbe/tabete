@@ -178,6 +178,9 @@ angular.module('tabete.controllers', [])
     
     $state.go('app.studies');
     var noti_data = JSON.parse(notification.data);
+    //Delete all old signals 
+
+
     studyServices.scheduleSignalsBySubstudy(noti_data.substudy_id);
 
 
@@ -324,6 +327,24 @@ angular.module('tabete.controllers', [])
     })
   };
 
+  $scope.substudyActive = function(substudy) {
+    if ($scope.settings.testmode || substudy.triggertype === 'EVENT') {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  $scope.substudyClass = function(substudy) {
+    if($scope.substudyActive(substudy)) {
+      return 'positive';
+    } else {
+      return 'energized';
+    }
+  }
+
+
+
   
   // Create Modal for adding new studies
   $ionicModal.fromTemplateUrl('templates/addstudy.html', {
@@ -370,7 +391,7 @@ angular.module('tabete.controllers', [])
     })
   }
   
-  $scope.loadSubstudy = function(substudyId) {
+  $scope.loadSubstudy = function(substudy) {
     var substudyData = {};
     
     // dataLayer.startSubstudy(substudyId).then(function (res) {
@@ -386,9 +407,11 @@ angular.module('tabete.controllers', [])
     //     });
     //   })
     //   })
-    
-    startSubstudy(substudyId, Date.now());
-    
+    console.log('in click');
+    if($scope.substudyActive(substudy)) {
+      console.log('in active');
+      startSubstudy(substudy.substudy_id, Date.now());  
+    }       
 
     //   $state.go('app.questiongroup', {'questiongroupId': substudyId});
     // }, function (err) {
@@ -397,6 +420,7 @@ angular.module('tabete.controllers', [])
   }
 
   var startSubstudy = function(substudyId, signaltime) {
+    console.log('in start');
     dataLayer.startSubstudy(substudyId, signaltime).then(function (questiongroupId) {
       console.log("Starting substudy, first questiongroup: " + questiongroupId);
       $state.go('app.questiongroup', {'questiongroupId': questiongroupId});

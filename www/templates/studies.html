@@ -7,8 +7,8 @@
     </ion-nav-buttons>
   <ion-content ng-class="{'has-footer': settings.testmode}">
     <ion-list show-delete="false" can-swipe="true">
-      <ion-item ng-repeat="substudy in substudies" ng-show="settings.testmode || substudy.triggertype === 'EVENT'" ng-click="loadSubstudy(substudy.substudy_id)">
-        {{ substudy.substudy_title }}
+      <ion-item ng-repeat="substudy in substudies" ng-class="substudyClass(substudy)" ng-click="loadSubstudy(substudy)">
+        {{ substudy.substudy_title }}   
         <ion-option-button class="button-light icon ion-ios-information-outline" ng-click="showSubstudyInfo(substudy.substudy_id)"></ion-option-button>
       </ion-item>
       <ion-item ng-hide="hasSubstudies">
@@ -25,6 +25,6 @@
   <button class="button button-block" ng-click="testLocalNotification()">Test Local Notification</button>   -->
   </ion-content>
   <ion-footer-bar class="bar-energized" ng-if="settings.testmode">
-  	<h1 class="title">Testmodus</h1>
+  	<h1 class="title">Trainingsmodus</h1>
   </ion-footer-bar>
 </ion-view>
