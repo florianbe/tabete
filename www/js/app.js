@@ -6,7 +6,7 @@
 // 'starter.controllers' is found in controllers.js
 var app = angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListDivider', 'ngCordova', 'tabete.services', 'tabete.controllers'])
 
-.run(function($ionicPlatform, $cordovaSQLite) {
+.run(function($ionicPlatform, $state, $cordovaSQLite) {
   $ionicPlatform.ready(function() {
     // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
     // for form inputs)
@@ -32,6 +32,11 @@ var app = angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListD
       // Ionic serve syntax
       db = window.openDatabase("tabete.db", "1.0", "Cordova Demo", 200000);
     }
+
+    document.addEventListener("resume", function(){
+       console.log("APP RESUME");
+       $state.go('app.studies');
+    },false);
 
     //Database: create tables
         //SERVERS
