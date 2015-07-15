@@ -33,8 +33,8 @@ var app = angular.module('tabete', ['ionic', 'ionic.utils', 'ionic.ion.autoListD
       db = window.openDatabase("tabete.db", "1.0", "Cordova Demo", 200000);
     }
 
-    document.addEventListener("resume", function(){
-       console.log("APP RESUME");
+    document.addEventListener("pause", function(){
+       console.log("APP PAUSE");
        $state.go('app.studies');
     },false);
 

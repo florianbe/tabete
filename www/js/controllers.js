@@ -179,6 +179,23 @@ angular.module('tabete.controllers', [])
     $state.go('app.studies');
     var noti_data = JSON.parse(notification.data);
     //Delete all old signals 
+    
+    $cordovaLocalNotification.getScheduledIds().then(function(result) {
+      for (var i = 0; i < result.length; i++) {
+        if (result[i] != notification.id) {
+          cordova.plugins.notification.local.clear(result[i]);
+        }
+      };
+    })
+
+    cordova.plugins.notification.local.getScheduledIds(function (ids) {
+      console.log(ids);
+    // getScheduledIds() or getTriggeredIds()
+    });
+    cordova.plugins.notification.local.getTriggered(function (notifications) {
+      console.log(notifications);
+    });
+    //$cordovaLocalNotification.clear(notification.id);        
 
 
     studyServices.scheduleSignalsBySubstudy(noti_data.substudy_id);

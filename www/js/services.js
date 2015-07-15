@@ -831,46 +831,49 @@ angular.module('tabete.services', ['ngCordova'])
         }
 
         var _scheduleSignalsBySubstudy = function (substudyId) {
-		var query = "SELECT id, substudy_id, signal_date FROM signalpoints WHERE substudy_id = ? ORDER BY signal_date ASC";
-		$cordovaSQLite.execute(db, query, [substudyId]).then(function (res) {
-		var signalsToDelete = [];
-		var signalsToSchedule = [];
+			//Delete old signals
+			
 
-		if (res.rows.length > 0) {
+				var query = "SELECT id, substudy_id, signal_date FROM signalpoints WHERE substudy_id = ? ORDER BY signal_date ASC";
+				$cordovaSQLite.execute(db, query, [substudyId]).then(function (res) {
+				var signalsToDelete = [];
+				var signalsToSchedule = [];
 
-			var maxSignalsToSchedule = 10;
-			for (var i = 0; i < res.rows.length; i++) {
-				if (Date.parse(res.rows.item(i).signal_date) < Date.now()) {
-					signalsToDelete.push[res.rows.item(i).id];
-				} else if (signalsToSchedule.length < 10) {
-					var data = {
-							substudy_id: 	res.rows.item(i).substudy_id,
-							signaltime: 	Date.parse(res.rows.item(i).signal_date)
-						}
+				if (res.rows.length > 0) {
+
+					var maxSignalsToSchedule = 10;
+					for (var i = 0; i < res.rows.length; i++) {
+						if (Date.parse(res.rows.item(i).signal_date) < Date.now()) {
+							signalsToDelete.push[res.rows.item(i).id];
+						} else if (signalsToSchedule.length < 10) {
+							var data = {
+								substudy_id: 	res.rows.item(i).substudy_id,
+								signaltime: 	Date.parse(res.rows.item(i).signal_date)
+							}
 
 
-					$cordovaLocalNotification.schedule({
-						id: 	res.rows.item(i).id,
-						title: 	'Datenerfassung Studie',
-						text: 	'Bitte beantworten Sie die folgenden Fragen',
-						at: 	Date.parse(res.rows.item(i).signal_date),
-						data: 	data  
-						})
-					} 
+							$cordovaLocalNotification.schedule({
+								id: 	res.rows.item(i).id,
+								title: 	'Datenerfassung Studie',
+								text: 	'Bitte beantworten Sie die folgenden Fragen',
+								at: 	Date.parse(res.rows.item(i).signal_date),
+								data: 	data  
+								})
+						} 
+					}
 				}
-			}
-			
-			var deleteQuery = "DELETE FROM signalpoints WHERE id = ?";
-			for (var i = 0; i < signalsToDelete.length; i++) {
-				$cordovaSQLite.execute(db, deleteQuery, [signalsToDelete[i]]);
-			};
+				
+				var deleteQuery = "DELETE FROM signalpoints WHERE id = ?";
+				for (var i = 0; i < signalsToDelete.length; i++) {
+					$cordovaSQLite.execute(db, deleteQuery, [signalsToDelete[i]]);
+				};
 
 
-		  }).catch(function (err) {
-	      	console.error(err);
-	      })
-			
-	}
+			  }).catch(function (err) {
+		      	console.error(err);
+		      })
+
+		}
 
         var _initAnswerObject = function(substudyId, signaltime) {
         	//Overwrite the variable in localstorage just in case
