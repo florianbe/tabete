@@ -188,16 +188,6 @@ angular.module('tabete.controllers', [])
       };
     })
 
-    cordova.plugins.notification.local.getScheduledIds(function (ids) {
-      console.log(ids);
-    // getScheduledIds() or getTriggeredIds()
-    });
-    cordova.plugins.notification.local.getTriggered(function (notifications) {
-      console.log(notifications);
-    });
-    //$cordovaLocalNotification.clear(notification.id);        
-
-
     studyServices.scheduleSignalsBySubstudy(noti_data.substudy_id);
 
 
